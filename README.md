@@ -9,9 +9,11 @@ Comme le Sphinx de la mythologie grecque, **sphinx-ci** bloque le merge d'une Pu
 1. Connecte-toi avec GitHub sur sphinx-ci
 2. Configure sphinx-ci sur tes repos (genere une cle API)
 3. Ajoute le workflow GitHub Action a ton repo
-4. A chaque PR, le Sphinx genere un quiz de 10 questions sur ton diff
+4. Commente `/sphinx` sur une PR pour declencher le quiz
 5. Le developpeur repond au quiz via le lien poste sur la PR
 6. Score >= 70% → merge debloque. Sinon, nouvelles questions (max 3 tentatives)
+
+> **Tu veux installer sphinx-ci sur ton repo ?** Suis le guide pas a pas dans [INSTALLATION.md](./INSTALLATION.md).
 
 ## Architecture
 
