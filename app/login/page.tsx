@@ -1,7 +1,14 @@
 import { signIn } from "@/lib/auth-options";
 import Link from "next/link";
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string }>;
+}) {
+  const { callbackUrl } = await searchParams;
+  const redirectTo = callbackUrl || "/dashboard";
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "#0f0c1a" }}>
       <div className="max-w-sm w-full">
@@ -19,7 +26,7 @@ export default function LoginPage() {
           </Link>
           <h1 className="text-2xl font-bold text-white mb-2">Connexion</h1>
           <p style={{ color: "#b0a8c4" }}>
-            Connecte-toi avec GitHub pour acceder a ton dashboard.
+            Connecte-toi avec GitHub pour continuer.
           </p>
         </div>
 
@@ -30,7 +37,7 @@ export default function LoginPage() {
           <form
             action={async () => {
               "use server";
-              await signIn("github", { redirectTo: "/dashboard" });
+              await signIn("github", { redirectTo });
             }}
           >
             <button

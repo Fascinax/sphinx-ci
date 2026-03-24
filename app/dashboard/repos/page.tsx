@@ -11,16 +11,34 @@ export default async function ReposPage() {
   if (!session?.user || !session.accessToken) redirect("/login");
 
   const repos = await getUserRepos(session.accessToken);
+  const repoNames = repos.map((r) => r.full_name);
 
-  const teams = await prisma.team.findMany({
+  // Fetch teams owned by the current user
+  const myTeams = await prisma.team.findMany({
     where: { userId: session.user.id },
     select: { id: true, name: true, apiKey: true, quizConfig: true },
   });
+  const myTeamMap = new Map(myTeams.map((t) => [t.name, t]));
 
-  const configuredRepos = new Map(teams.map((t) => [t.name, t]));
+  // Fetch teams configured by others on repos the current user has access to
+  const otherTeams = await prisma.team.findMany({
+    where: {
+      name: { in: repoNames },
+      userId: { not: session.user.id },
+    },
+    select: { id: true, name: true, quizConfig: true, user: { select: { githubLogin: true } } },
+  });
+  const otherTeamMap = new Map(otherTeams.map((t) => [t.name, t]));
 
-  const configured = repos.filter((r) => configuredRepos.has(r.full_name));
-  const available = repos.filter((r) => !configuredRepos.has(r.full_name));
+  const configuredByMe = repos.filter((r) => myTeamMap.has(r.full_name));
+  const configuredByOthers = repos.filter(
+    (r) => !myTeamMap.has(r.full_name) && otherTeamMap.has(r.full_name)
+  );
+  const available = repos.filter(
+    (r) => !myTeamMap.has(r.full_name) && !otherTeamMap.has(r.full_name)
+  );
+
+  const totalConfigured = configuredByMe.length + configuredByOthers.length;
 
   return (
     <div>
@@ -36,11 +54,11 @@ export default async function ReposPage() {
         <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2" style={{ fontFamily: "Georgia, serif" }}>
           Repos configures
           <span className="text-xs font-normal px-2 py-0.5 rounded-full" style={{ background: "rgba(201,168,76,0.1)", color: "#c9a84c" }}>
-            {configured.length}
+            {totalConfigured}
           </span>
         </h2>
 
-        {configured.length === 0 ? (
+        {totalConfigured === 0 ? (
           <div className="rounded-lg p-6 text-center border" style={{ background: "#1a1628", borderColor: "#252036" }}>
             <p style={{ color: "#b0a8c4" }}>
               Aucun repo configure. Choisis un repo ci-dessous pour commencer.
@@ -48,8 +66,9 @@ export default async function ReposPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {configured.map((repo) => {
-              const team = configuredRepos.get(repo.full_name)!;
+            {/* Repos configured by me — full control */}
+            {configuredByMe.map((repo) => {
+              const team = myTeamMap.get(repo.full_name)!;
               return (
                 <RepoCard
                   key={repo.id}
@@ -63,6 +82,55 @@ export default async function ReposPage() {
                   teamId={team.id}
                   initialConfig={team.quizConfig as any}
                 />
+              );
+            })}
+
+            {/* Repos configured by someone else — read only */}
+            {configuredByOthers.map((repo) => {
+              const team = otherTeamMap.get(repo.full_name)!;
+              const config = (team.quizConfig || {}) as Record<string, any>;
+              return (
+                <div
+                  key={repo.id}
+                  className="rounded-lg p-4 border"
+                  style={{ background: "#1a1628", borderColor: "#252036" }}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-white font-medium truncate">{repo.full_name}</h3>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded ${
+                            repo.private ? "text-yellow-400 bg-yellow-400/10" : "text-gray-400 bg-gray-400/10"
+                          }`}
+                        >
+                          {repo.private ? "prive" : "public"}
+                        </span>
+                      </div>
+                      {repo.description && <p className="text-sm text-gray-400 truncate">{repo.description}</p>}
+                    </div>
+                    <span
+                      className="ml-4 px-3 py-1 text-xs font-medium rounded"
+                      style={{ color: "#c9a84c", background: "rgba(201,168,76,0.1)" }}
+                    >
+                      Configure
+                    </span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="text-xs px-2 py-1 rounded" style={{ background: "rgba(201,168,76,0.1)", color: "#c9a84c" }}>
+                      {config.numQuestions || 10} questions
+                    </span>
+                    <span className="text-xs px-2 py-1 rounded" style={{ background: "rgba(201,168,76,0.1)", color: "#c9a84c" }}>
+                      Score min {config.passingScore || 70}%
+                    </span>
+                    <span className="text-xs px-2 py-1 rounded" style={{ background: "rgba(201,168,76,0.1)", color: "#c9a84c" }}>
+                      {config.keyword || "/sphinx"}
+                    </span>
+                    <span className="text-xs" style={{ color: "#8b85a0" }}>
+                      — configure par {team.user?.githubLogin || "un membre de l'equipe"}
+                    </span>
+                  </div>
+                </div>
               );
             })}
           </div>
