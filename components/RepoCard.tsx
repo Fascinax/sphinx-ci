@@ -11,6 +11,14 @@ interface RepoCardProps {
   configured: boolean;
   apiKey?: string;
   teamId?: string;
+  initialConfig?: {
+    numQuestions?: number;
+    passingScore?: number;
+    maxAttempts?: number;
+    language?: "fr" | "en";
+    keyword?: string;
+  };
+  hasAnthropicKey?: boolean;
 }
 
 const selectClass =
@@ -27,6 +35,8 @@ export default function RepoCard({
   configured: initialConfigured,
   apiKey: initialApiKey,
   teamId: initialTeamId,
+  initialConfig,
+  hasAnthropicKey: initialHasKey,
 }: RepoCardProps) {
   const [configured, setConfigured] = useState(initialConfigured);
   const [apiKey, setApiKey] = useState(initialApiKey || "");
@@ -35,52 +45,85 @@ export default function RepoCard({
   const [showKey, setShowKey] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
+  const [hasAnthropicKey, setHasAnthropicKey] = useState(initialHasKey ?? false);
 
   // Form state
   const [anthropicKey, setAnthropicKey] = useState("");
-  const [numQuestions, setNumQuestions] = useState(10);
-  const [passingScore, setPassingScore] = useState(70);
-  const [maxAttempts, setMaxAttempts] = useState(3);
-  const [quizLanguage, setQuizLanguage] = useState<"fr" | "en">("fr");
-  const [keyword, setKeyword] = useState("/sphinx");
+  const [numQuestions, setNumQuestions] = useState(initialConfig?.numQuestions ?? 10);
+  const [passingScore, setPassingScore] = useState(initialConfig?.passingScore ?? 70);
+  const [maxAttempts, setMaxAttempts] = useState(initialConfig?.maxAttempts ?? 3);
+  const [quizLanguage, setQuizLanguage] = useState<"fr" | "en">(initialConfig?.language ?? "fr");
+  const [keyword, setKeyword] = useState(initialConfig?.keyword ?? "/sphinx");
+
+  function openEditForm() {
+    setEditing(true);
+    setShowForm(true);
+    setAnthropicKey("");
+    setError("");
+  }
 
   async function handleConfigure() {
-    if (!anthropicKey.trim()) {
+    if (!editing && !anthropicKey.trim()) {
       setError("La cle Anthropic API est obligatoire.");
       return;
     }
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/keys", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          repo: repoFullName,
-          anthropicApiKey: anthropicKey,
-          config: {
-            numQuestions,
-            passingScore,
-            maxAttempts,
-            language: quizLanguage,
-            keyword,
-          },
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setApiKey(data.apiKey);
-        setTeamId(data.id);
-        setConfigured(true);
-        setShowKey(true);
-        setShowForm(false);
-      } else if (res.status === 409) {
-        setApiKey(data.apiKey);
-        setConfigured(true);
-        setShowForm(false);
+      if (editing && teamId) {
+        // PUT to update existing config
+        const body: Record<string, unknown> = {
+          config: { numQuestions, passingScore, maxAttempts, language: quizLanguage, keyword },
+        };
+        if (anthropicKey.trim()) {
+          body.anthropicApiKey = anthropicKey;
+        }
+        const res = await fetch(`/api/keys/${teamId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (res.ok) {
+          setShowForm(false);
+          setEditing(false);
+          if (anthropicKey.trim()) setHasAnthropicKey(true);
+        } else {
+          const data = await res.json();
+          setError(data.error || "Erreur lors de la mise a jour.");
+        }
       } else {
-        setError(data.error || "Erreur lors de la configuration.");
+        // POST to create new config
+        if (!anthropicKey.trim()) {
+          setError("La cle Anthropic API est obligatoire.");
+          setLoading(false);
+          return;
+        }
+        const res = await fetch("/api/keys", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            repo: repoFullName,
+            anthropicApiKey: anthropicKey,
+            config: { numQuestions, passingScore, maxAttempts, language: quizLanguage, keyword },
+          }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setApiKey(data.apiKey);
+          setTeamId(data.id);
+          setConfigured(true);
+          setHasAnthropicKey(true);
+          setShowKey(true);
+          setShowForm(false);
+        } else if (res.status === 409) {
+          setApiKey(data.apiKey);
+          setConfigured(true);
+          setShowForm(false);
+        } else {
+          setError(data.error || "Erreur lors de la configuration.");
+        }
       }
     } finally {
       setLoading(false);
@@ -88,12 +131,7 @@ export default function RepoCard({
   }
 
   async function handleRevoke() {
-    if (
-      !confirm(
-        `Revoquer la cle API pour ${repoFullName} ? Les quiz existants seront supprimes.`
-      )
-    )
-      return;
+    if (!confirm(`Revoquer la cle API pour ${repoFullName} ? Les quiz existants seront supprimes.`)) return;
     setLoading(true);
     try {
       const res = await fetch(`/api/keys/${teamId}`, { method: "DELETE" });
@@ -103,6 +141,7 @@ export default function RepoCard({
         setTeamId("");
         setShowKey(false);
         setAnthropicKey("");
+        setHasAnthropicKey(false);
       }
     } finally {
       setLoading(false);
@@ -130,34 +169,110 @@ export default function RepoCard({
     setTimeout(() => setCopied(false), 2000);
   }
 
+  const configForm = (
+    <div className="mt-4 pt-4 border-t" style={{ borderColor: "#252036" }}>
+      <div className="space-y-3">
+        {/* Anthropic API Key */}
+        <div>
+          <label className={labelClass}>
+            Cle Anthropic API {editing && hasAnthropicKey ? "(laisser vide pour garder l'actuelle)" : "*"}
+          </label>
+          <input
+            type="password"
+            value={anthropicKey}
+            onChange={(e) => setAnthropicKey(e.target.value)}
+            placeholder={editing && hasAnthropicKey ? "sk-ant-••••••••" : "sk-ant-..."}
+            className={inputClass}
+          />
+        </div>
+
+        {/* Settings grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div>
+            <label className={labelClass}>Questions</label>
+            <select value={numQuestions} onChange={(e) => setNumQuestions(Number(e.target.value))} className={selectClass}>
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={15}>15</option>
+              <option value={20}>20</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Score min</label>
+            <select value={passingScore} onChange={(e) => setPassingScore(Number(e.target.value))} className={selectClass}>
+              <option value={50}>50%</option>
+              <option value={60}>60%</option>
+              <option value={70}>70%</option>
+              <option value={80}>80%</option>
+              <option value={90}>90%</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Tentatives</label>
+            <select value={maxAttempts} onChange={(e) => setMaxAttempts(Number(e.target.value))} className={selectClass}>
+              <option value={1}>1</option>
+              <option value={2}>2</option>
+              <option value={3}>3</option>
+              <option value={4}>4</option>
+              <option value={5}>5</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Langue</label>
+            <select value={quizLanguage} onChange={(e) => setQuizLanguage(e.target.value as "fr" | "en")} className={selectClass}>
+              <option value="fr">Francais</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Keyword */}
+        <div>
+          <label className={labelClass}>Keyword declencheur (dans un commentaire PR)</label>
+          <input type="text" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="/sphinx" className={inputClass} />
+        </div>
+
+        {error && <p className="text-xs text-red-400">{error}</p>}
+
+        <div className="flex gap-2">
+          <button
+            onClick={handleConfigure}
+            disabled={loading}
+            className="px-4 py-2 text-sm font-medium rounded-lg transition-all disabled:opacity-50"
+            style={{ background: "#c9a84c", color: "#0f0c1a" }}
+          >
+            {loading ? "..." : editing ? "Sauvegarder" : "Generer la cle API"}
+          </button>
+          <button
+            onClick={() => { setShowForm(false); setEditing(false); setError(""); }}
+            className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <div
-      className="rounded-lg p-4 border"
-      style={{ background: "#1a1628", borderColor: "#252036" }}
-    >
+    <div className="rounded-lg p-4 border" style={{ background: "#1a1628", borderColor: "#252036" }}>
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <h3 className="text-white font-medium truncate">{repoFullName}</h3>
             <span
               className={`text-xs px-2 py-0.5 rounded ${
-                isPrivate
-                  ? "text-yellow-400 bg-yellow-400/10"
-                  : "text-gray-400 bg-gray-400/10"
+                isPrivate ? "text-yellow-400 bg-yellow-400/10" : "text-gray-400 bg-gray-400/10"
               }`}
             >
               {isPrivate ? "prive" : "public"}
             </span>
           </div>
-          {description && (
-            <p className="text-sm text-gray-500 truncate">{description}</p>
-          )}
-          {language && (
-            <p className="text-xs text-gray-600 mt-1">{language}</p>
-          )}
+          {description && <p className="text-sm text-gray-500 truncate">{description}</p>}
+          {language && <p className="text-xs text-gray-600 mt-1">{language}</p>}
         </div>
 
-        <div className="ml-4 flex-shrink-0">
+        <div className="ml-4 flex-shrink-0 flex items-center gap-2">
           {!configured && !showForm ? (
             <button
               onClick={() => setShowForm(true)}
@@ -166,175 +281,59 @@ export default function RepoCard({
             >
               Configurer
             </button>
-          ) : configured ? (
-            <span
-              className="px-3 py-1 text-xs font-medium rounded"
-              style={{ color: "#c9a84c", background: "rgba(201,168,76,0.1)" }}
-            >
-              Configure
-            </span>
+          ) : configured && !showForm ? (
+            <>
+              <button
+                onClick={openEditForm}
+                className="px-3 py-1 text-xs font-medium rounded border transition-colors"
+                style={{ borderColor: "#c9a84c", color: "#c9a84c" }}
+              >
+                Modifier
+              </button>
+              <span
+                className="px-3 py-1 text-xs font-medium rounded"
+                style={{ color: "#c9a84c", background: "rgba(201,168,76,0.1)" }}
+              >
+                Configure
+              </span>
+            </>
           ) : null}
         </div>
       </div>
 
-      {/* Configuration form */}
-      {showForm && !configured && (
-        <div className="mt-4 pt-4 border-t" style={{ borderColor: "#252036" }}>
-          <div className="space-y-3">
-            {/* Anthropic API Key */}
-            <div>
-              <label className={labelClass}>
-                Cle Anthropic API *
-              </label>
-              <input
-                type="password"
-                value={anthropicKey}
-                onChange={(e) => setAnthropicKey(e.target.value)}
-                placeholder="sk-ant-..."
-                className={inputClass}
-              />
-            </div>
-
-            {/* Settings grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div>
-                <label className={labelClass}>Questions</label>
-                <select
-                  value={numQuestions}
-                  onChange={(e) => setNumQuestions(Number(e.target.value))}
-                  className={selectClass}
-                >
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={15}>15</option>
-                  <option value={20}>20</option>
-                </select>
-              </div>
-              <div>
-                <label className={labelClass}>Score min</label>
-                <select
-                  value={passingScore}
-                  onChange={(e) => setPassingScore(Number(e.target.value))}
-                  className={selectClass}
-                >
-                  <option value={50}>50%</option>
-                  <option value={60}>60%</option>
-                  <option value={70}>70%</option>
-                  <option value={80}>80%</option>
-                  <option value={90}>90%</option>
-                </select>
-              </div>
-              <div>
-                <label className={labelClass}>Tentatives</label>
-                <select
-                  value={maxAttempts}
-                  onChange={(e) => setMaxAttempts(Number(e.target.value))}
-                  className={selectClass}
-                >
-                  <option value={1}>1</option>
-                  <option value={2}>2</option>
-                  <option value={3}>3</option>
-                  <option value={4}>4</option>
-                  <option value={5}>5</option>
-                </select>
-              </div>
-              <div>
-                <label className={labelClass}>Langue</label>
-                <select
-                  value={quizLanguage}
-                  onChange={(e) =>
-                    setQuizLanguage(e.target.value as "fr" | "en")
-                  }
-                  className={selectClass}
-                >
-                  <option value="fr">Francais</option>
-                  <option value="en">English</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Keyword */}
-            <div>
-              <label className={labelClass}>
-                Keyword declencheur (dans un commentaire PR)
-              </label>
-              <input
-                type="text"
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-                placeholder="/sphinx"
-                className={inputClass}
-              />
-            </div>
-
-            {error && (
-              <p className="text-xs text-red-400">{error}</p>
-            )}
-
-            <div className="flex gap-2">
-              <button
-                onClick={handleConfigure}
-                disabled={loading}
-                className="px-4 py-2 text-sm font-medium rounded-lg transition-all disabled:opacity-50"
-                style={{ background: "#c9a84c", color: "#0f0c1a" }}
-              >
-                {loading ? "..." : "Generer la cle API"}
-              </button>
-              <button
-                onClick={() => setShowForm(false)}
-                className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
-              >
-                Annuler
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Configuration form (create or edit) */}
+      {showForm && configForm}
 
       {/* API Key section */}
-      {configured && apiKey && (
+      {configured && apiKey && !showForm && (
         <div className="mt-3 pt-3 border-t" style={{ borderColor: "#252036" }}>
+          {!hasAnthropicKey && (
+            <div className="mb-3 px-3 py-2 rounded text-xs border" style={{ background: "rgba(239,68,68,0.1)", borderColor: "rgba(239,68,68,0.3)", color: "#f87171" }}>
+              Cle Anthropic manquante — clique "Modifier" pour l&apos;ajouter.
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <code
               className="flex-1 text-xs text-gray-400 px-3 py-2 rounded font-mono truncate"
               style={{ background: "#0f0c1a" }}
             >
-              {showKey
-                ? apiKey
-                : `${apiKey.slice(0, 12)}...${apiKey.slice(-6)}`}
+              {showKey ? apiKey : `${apiKey.slice(0, 12)}...${apiKey.slice(-6)}`}
             </code>
-            <button
-              onClick={() => setShowKey(!showKey)}
-              className="text-xs text-gray-500 hover:text-gray-300 px-2 py-2"
-            >
+            <button onClick={() => setShowKey(!showKey)} className="text-xs text-gray-500 hover:text-gray-300 px-2 py-2">
               {showKey ? "Masquer" : "Voir"}
             </button>
-            <button
-              onClick={handleCopy}
-              className="text-xs px-2 py-2"
-              style={{ color: "#c9a84c" }}
-            >
+            <button onClick={handleCopy} className="text-xs px-2 py-2" style={{ color: "#c9a84c" }}>
               {copied ? "Copie !" : "Copier"}
             </button>
-            <button
-              onClick={handleResetKey}
-              disabled={loading}
-              className="text-xs text-orange-400 hover:text-orange-300 px-2 py-2"
-            >
+            <button onClick={handleResetKey} disabled={loading} className="text-xs text-orange-400 hover:text-orange-300 px-2 py-2">
               Reset cle
             </button>
-            <button
-              onClick={handleRevoke}
-              disabled={loading}
-              className="text-xs text-red-400 hover:text-red-300 px-2 py-2"
-            >
+            <button onClick={handleRevoke} disabled={loading} className="text-xs text-red-400 hover:text-red-300 px-2 py-2">
               Revoquer
             </button>
           </div>
           <p className="text-xs text-gray-600 mt-2">
-            Ajoute cette cle comme secret{" "}
-            <code className="text-gray-500">PR_QUIZ_API_KEY</code> dans Settings
-            &gt; Secrets and variables &gt; Actions de ton repo.
+            Ajoute cette cle comme secret <code className="text-gray-500">PR_QUIZ_API_KEY</code> dans Settings &gt; Secrets and variables &gt; Actions de ton repo.
           </p>
         </div>
       )}

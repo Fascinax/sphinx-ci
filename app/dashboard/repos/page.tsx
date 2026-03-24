@@ -16,7 +16,7 @@ export default async function ReposPage() {
   // Fetch configured teams for this user
   const teams = await prisma.team.findMany({
     where: { userId: session.user.id },
-    select: { id: true, name: true, apiKey: true },
+    select: { id: true, name: true, apiKey: true, anthropicApiKey: true, quizConfig: true },
   });
 
   const configuredRepos = new Map(teams.map((t) => [t.name, t]));
@@ -43,6 +43,8 @@ export default async function ReposPage() {
               configured={!!team}
               apiKey={team?.apiKey}
               teamId={team?.id}
+              initialConfig={team?.quizConfig as any}
+              hasAnthropicKey={!!team?.anthropicApiKey}
             />
           );
         })}
