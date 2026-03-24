@@ -18,7 +18,6 @@ interface RepoCardProps {
     language?: "fr" | "en";
     keyword?: string;
   };
-  hasAnthropicKey?: boolean;
 }
 
 const selectClass =
@@ -36,7 +35,6 @@ export default function RepoCard({
   apiKey: initialApiKey,
   teamId: initialTeamId,
   initialConfig,
-  hasAnthropicKey: initialHasKey,
 }: RepoCardProps) {
   const [configured, setConfigured] = useState(initialConfigured);
   const [apiKey, setApiKey] = useState(initialApiKey || "");
@@ -47,10 +45,8 @@ export default function RepoCard({
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
-  const [hasAnthropicKey, setHasAnthropicKey] = useState(initialHasKey ?? false);
 
   // Form state
-  const [anthropicKey, setAnthropicKey] = useState("");
   const [numQuestions, setNumQuestions] = useState(initialConfig?.numQuestions ?? 10);
   const [passingScore, setPassingScore] = useState(initialConfig?.passingScore ?? 70);
   const [maxAttempts, setMaxAttempts] = useState(initialConfig?.maxAttempts ?? 3);
@@ -60,52 +56,34 @@ export default function RepoCard({
   function openEditForm() {
     setEditing(true);
     setShowForm(true);
-    setAnthropicKey("");
     setError("");
   }
 
   async function handleConfigure() {
-    if (!editing && !anthropicKey.trim()) {
-      setError("La cle Anthropic API est obligatoire.");
-      return;
-    }
     setError("");
     setLoading(true);
     try {
       if (editing && teamId) {
-        // PUT to update existing config
-        const body: Record<string, unknown> = {
-          config: { numQuestions, passingScore, maxAttempts, language: quizLanguage, keyword },
-        };
-        if (anthropicKey.trim()) {
-          body.anthropicApiKey = anthropicKey;
-        }
         const res = await fetch(`/api/keys/${teamId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
+          body: JSON.stringify({
+            config: { numQuestions, passingScore, maxAttempts, language: quizLanguage, keyword },
+          }),
         });
         if (res.ok) {
           setShowForm(false);
           setEditing(false);
-          if (anthropicKey.trim()) setHasAnthropicKey(true);
         } else {
           const data = await res.json();
           setError(data.error || "Erreur lors de la mise a jour.");
         }
       } else {
-        // POST to create new config
-        if (!anthropicKey.trim()) {
-          setError("La cle Anthropic API est obligatoire.");
-          setLoading(false);
-          return;
-        }
         const res = await fetch("/api/keys", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             repo: repoFullName,
-            anthropicApiKey: anthropicKey,
             config: { numQuestions, passingScore, maxAttempts, language: quizLanguage, keyword },
           }),
         });
@@ -114,7 +92,6 @@ export default function RepoCard({
           setApiKey(data.apiKey);
           setTeamId(data.id);
           setConfigured(true);
-          setHasAnthropicKey(true);
           setShowKey(true);
           setShowForm(false);
         } else if (res.status === 409) {
@@ -140,8 +117,6 @@ export default function RepoCard({
         setApiKey("");
         setTeamId("");
         setShowKey(false);
-        setAnthropicKey("");
-        setHasAnthropicKey(false);
       }
     } finally {
       setLoading(false);
@@ -172,20 +147,6 @@ export default function RepoCard({
   const configForm = (
     <div className="mt-4 pt-4 border-t" style={{ borderColor: "#252036" }}>
       <div className="space-y-3">
-        {/* Anthropic API Key */}
-        <div>
-          <label className={labelClass}>
-            Cle Anthropic API {editing && hasAnthropicKey ? "(laisser vide pour garder l'actuelle)" : "*"}
-          </label>
-          <input
-            type="password"
-            value={anthropicKey}
-            onChange={(e) => setAnthropicKey(e.target.value)}
-            placeholder={editing && hasAnthropicKey ? "sk-ant-••••••••" : "sk-ant-..."}
-            className={inputClass}
-          />
-        </div>
-
         {/* Settings grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div>
@@ -268,8 +229,8 @@ export default function RepoCard({
               {isPrivate ? "prive" : "public"}
             </span>
           </div>
-          {description && <p className="text-sm text-gray-500 truncate">{description}</p>}
-          {language && <p className="text-xs text-gray-600 mt-1">{language}</p>}
+          {description && <p className="text-sm text-gray-400 truncate">{description}</p>}
+          {language && <p className="text-xs text-gray-400 mt-1">{language}</p>}
         </div>
 
         <div className="ml-4 flex-shrink-0 flex items-center gap-2">
@@ -307,11 +268,6 @@ export default function RepoCard({
       {/* API Key section */}
       {configured && apiKey && !showForm && (
         <div className="mt-3 pt-3 border-t" style={{ borderColor: "#252036" }}>
-          {!hasAnthropicKey && (
-            <div className="mb-3 px-3 py-2 rounded text-xs border" style={{ background: "rgba(239,68,68,0.1)", borderColor: "rgba(239,68,68,0.3)", color: "#f87171" }}>
-              Cle Anthropic manquante — clique "Modifier" pour l&apos;ajouter.
-            </div>
-          )}
           <div className="flex items-center gap-2">
             <code
               className="flex-1 text-xs text-gray-400 px-3 py-2 rounded font-mono truncate"
@@ -319,7 +275,7 @@ export default function RepoCard({
             >
               {showKey ? apiKey : `${apiKey.slice(0, 12)}...${apiKey.slice(-6)}`}
             </code>
-            <button onClick={() => setShowKey(!showKey)} className="text-xs text-gray-500 hover:text-gray-300 px-2 py-2">
+            <button onClick={() => setShowKey(!showKey)} className="text-xs text-gray-400 hover:text-gray-300 px-2 py-2">
               {showKey ? "Masquer" : "Voir"}
             </button>
             <button onClick={handleCopy} className="text-xs px-2 py-2" style={{ color: "#c9a84c" }}>
@@ -332,8 +288,9 @@ export default function RepoCard({
               Revoquer
             </button>
           </div>
-          <p className="text-xs text-gray-600 mt-2">
-            Ajoute cette cle comme secret <code className="text-gray-500">PR_QUIZ_API_KEY</code> dans Settings &gt; Secrets and variables &gt; Actions de ton repo.
+          <p className="text-xs mt-2" style={{ color: "#8b85a0" }}>
+            Ajoute ce secret dans ton repo : <code className="text-gray-400">PR_QUIZ_API_KEY</code>.
+            Ajoute aussi <code className="text-gray-400">ANTHROPIC_API_KEY</code> avec ta cle Anthropic.
           </p>
         </div>
       )}

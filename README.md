@@ -1,61 +1,64 @@
 # sphinx-ci
 
-Comme le Sphinx de la mythologie grecque, **sphinx-ci** bloque le merge d'une Pull Request tant que le developpeur n'a pas prouve sa comprehension de son propre code en repondant a un quiz de 10 questions genere par IA.
+Comme le Sphinx de la mythologie grecque, **sphinx-ci** bloque le merge d'une Pull Request tant que le developpeur n'a pas prouve sa comprehension de son propre code en repondant a un quiz genere par IA.
 
-**Score minimum pour merger : 70% — 3 tentatives — 48h max.**
-
-## Comment ca marche ?
-
-1. Connecte-toi avec GitHub sur sphinx-ci
-2. Configure sphinx-ci sur tes repos (genere une cle API)
-3. Ajoute le workflow GitHub Action a ton repo
-4. Commente `/sphinx` sur une PR pour declencher le quiz
-5. Le developpeur repond au quiz via le lien poste sur la PR
-6. Score >= 70% → merge debloque. Sinon, nouvelles questions (max 3 tentatives)
-
-> **Tu veux installer sphinx-ci sur ton repo ?** Suis le guide pas a pas dans [INSTALLATION.md](./INSTALLATION.md).
-
-## Architecture
-
-- **Site central** : application Next.js deployee sur Vercel. Les utilisateurs se connectent avec GitHub, configurent leurs repos, et passent les quiz
-- **GitHub Action** : workflow a copier dans chaque repo protege. Envoie le diff au site et poste le lien du quiz
-
-> **Pas besoin de creer une GitHub App.** On utilise une OAuth App GitHub pour le login sur le site, et le `GITHUB_TOKEN` automatique de GitHub Actions pour les status checks.
+Commente `/sphinx` sur une PR → un quiz est genere depuis le diff → le dev repond → merge debloque ou bloque.
 
 ---
 
-## Guide utilisateur — Ajouter sphinx-ci a ton repo
+## Installation
 
-### Etape 1 — Se connecter sur le site
+### Prerequis
 
-1. Va sur le site sphinx-ci (ex: `https://sphinx-ci.vercel.app`)
-2. Clique sur **Se connecter avec GitHub**
-3. Autorise l'application OAuth
+- Un compte GitHub
+- Une cle API [Anthropic](https://console.anthropic.com) (`sk-ant-...`)
+
+### Etape 1 — Se connecter sur sphinx-ci
+
+1. Va sur **https://sphinx-ci.vercel.app**
+2. Clique **Se connecter avec GitHub**
+3. Autorise l'application a acceder a ton compte GitHub
+
+> L'application demande le scope `repo` pour pouvoir poster des commentaires et des status checks sur tes PRs.
 
 ### Etape 2 — Configurer ton repo
 
-1. Dans le **Dashboard**, va dans l'onglet **Repos**
-2. Tu verras la liste de tes repos GitHub
-3. Clique sur **Configurer** sur le repo souhaite
-4. Une cle API est generee (format `spx_...`). **Copie-la.**
+1. Dans le dashboard, va dans l'onglet **Repos**
+2. Trouve le repo sur lequel tu veux activer sphinx-ci
+3. Clique **Configurer**
+4. Remplis le formulaire :
 
-### Etape 3 — Ajouter les secrets au repo GitHub
+| Champ | Description | Defaut |
+|-------|-------------|--------|
+| **Cle Anthropic API** | Ta cle `sk-ant-...` (obligatoire) | — |
+| **Questions** | Nombre de questions par quiz | 10 |
+| **Score min** | Score minimum pour debloquer le merge | 70% |
+| **Tentatives** | Nombre de tentatives max | 3 |
+| **Langue** | Langue des questions | Francais |
+| **Keyword** | Mot-cle pour declencher le quiz dans un commentaire PR | `/sphinx` |
 
-Dans ton repo GitHub : **Settings > Secrets and variables > Actions**
+5. Clique **Generer la cle API**
+6. **Copie la cle API** affichee (format `spx_...`) — tu en auras besoin a l'etape suivante
 
-**Secrets** (onglet Secrets) :
+### Etape 3 — Ajouter le secret et la variable dans ton repo GitHub
+
+Va dans ton repo GitHub : **Settings > Secrets and variables > Actions**
+
+**Secrets** (onglet Secrets) — clique **New repository secret** pour chacun :
 
 | Nom | Valeur |
 |-----|--------|
-| `PR_QUIZ_API_KEY` | La cle API copiee a l'etape 2 |
+| `PR_QUIZ_API_KEY` | La cle `spx_...` copiee a l'etape 2 |
+| `ANTHROPIC_API_KEY` | Ta cle API Anthropic (`sk-ant-...`) |
 
-**Variables** (onglet Variables) :
+**Variable** (onglet Variables) — clique **New repository variable** :
 
 | Nom | Valeur |
 |-----|--------|
-| `PR_QUIZ_HUB_URL` | L'URL du site sphinx-ci, ex: `https://sphinx-ci.vercel.app` |
+| `PR_QUIZ_HUB_URL` | `https://sphinx-ci.vercel.app` |
 
 > `GITHUB_TOKEN` est fourni automatiquement par GitHub Actions, rien a configurer.
+> La cle Anthropic reste dans les secrets de ton repo GitHub — elle n'est jamais saisie sur le site sphinx-ci.
 
 ### Etape 4 — Ajouter le workflow GitHub Action
 
@@ -65,8 +68,8 @@ Cree le fichier `.github/workflows/pr-quiz.yml` dans ton repo :
 name: PR Quiz
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: read
@@ -75,8 +78,23 @@ permissions:
 
 jobs:
   quiz:
+    if: github.event.issue.pull_request && contains(github.event.comment.body, '/sphinx')
     runs-on: ubuntu-latest
     steps:
+      - name: Get PR details
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            core.setOutput('head_sha', pr.data.head.sha);
+            core.setOutput('base_sha', pr.data.base.sha);
+            core.setOutput('title', pr.data.title);
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -88,7 +106,7 @@ jobs:
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              sha: context.payload.pull_request.head.sha,
+              sha: '${{ steps.pr.outputs.head_sha }}',
               state: 'pending',
               context: 'pr-quiz',
               description: 'Quiz en attente...',
@@ -100,22 +118,27 @@ jobs:
           PR_QUIZ_HUB_URL: ${{ vars.PR_QUIZ_HUB_URL }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          DIFF=$(git diff ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} \
+          HEAD_SHA="${{ steps.pr.outputs.head_sha }}"
+          BASE_SHA="${{ steps.pr.outputs.base_sha }}"
+          PR_TITLE="${{ steps.pr.outputs.title }}"
+          PR_NUMBER="${{ github.event.issue.number }}"
+
+          DIFF=$(git diff ${BASE_SHA}...${HEAD_SHA} \
             -- '*.js' '*.ts' '*.jsx' '*.tsx' '*.py' '*.go' '*.java' '*.rs' '*.rb' '*.php' '*.cs' '*.cpp' \
             | head -c 12000)
 
-          FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} | tr '\n' ',' | sed 's/,$//')
+          FILES=$(git diff --name-only ${BASE_SHA}...${HEAD_SHA} | tr '\n' ',' | sed 's/,$//')
 
           RESPONSE=$(curl -sf -X POST "$PR_QUIZ_HUB_URL/api/quiz" \
             -H "Content-Type: application/json" \
             -H "X-API-Key: $PR_QUIZ_API_KEY" \
             -d "{
               \"repo\": \"${{ github.repository }}\",
-              \"pr_number\": ${{ github.event.pull_request.number }},
-              \"head_sha\": \"${{ github.event.pull_request.head.sha }}\",
-              \"pr_title\": $(echo '${{ github.event.pull_request.title }}' | jq -Rs .),
-              \"diff\": $(echo \"$DIFF\" | jq -Rs .),
-              \"files_changed\": $(echo \"$FILES\" | jq -Rs 'split(\",\")'),
+              \"pr_number\": ${PR_NUMBER},
+              \"head_sha\": \"${HEAD_SHA}\",
+              \"pr_title\": $(echo "$PR_TITLE" | jq -Rs .),
+              \"diff\": $(echo "$DIFF" | jq -Rs .),
+              \"files_changed\": $(echo "$FILES" | jq -Rs 'split(",")'),
               \"callback_token\": \"$GITHUB_TOKEN\"
             }")
 
@@ -124,33 +147,104 @@ jobs:
 
           if [ "$SKIPPED" = "true" ]; then
             echo "No code changes, skipping quiz."
-            curl -sf -X POST "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }}" \
+            curl -sf -X POST "https://api.github.com/repos/${{ github.repository }}/statuses/${HEAD_SHA}" \
               -H "Authorization: token $GITHUB_TOKEN" \
               -H "Accept: application/vnd.github.v3+json" \
               -d '{"state":"success","context":"pr-quiz","description":"Pas de changement de code — quiz ignore"}'
             exit 0
           fi
 
-          gh pr comment ${{ github.event.pull_request.number }} --body "## Quiz de comprehension requis
+          gh pr comment ${PR_NUMBER} --body "## Quiz de comprehension requis
 
-          Pour debloquer le merge, complete ce quiz de 10 questions sur ton code.
-          **Score minimum : 70%**
+          Pour debloquer le merge, complete ce quiz sur ton code.
 
           [$QUIZ_URL]($QUIZ_URL)
 
-          *Le Sphinx attend ta reponse — 48h, 3 tentatives maximum.*"
+          *Le Sphinx attend ta reponse.*"
 ```
 
-### Etape 5 — Activer la branch protection (optionnel mais recommande)
+Commit et push ce fichier sur la branche principale de ton repo.
+
+### Etape 5 (optionnel) — Activer la branch protection
 
 Pour que le quiz **bloque reellement** le merge :
 
 1. Dans ton repo : **Settings > Branches**
-2. Ajouter une regle de protection sur `main` (ou `master`)
-3. Cocher **Require status checks to pass before merging**
-4. Rechercher et ajouter le status check : **`pr-quiz`**
+2. Clique **Add branch protection rule** (ou edite la regle existante)
+3. Branch name pattern : `main` (ou `master`)
+4. Coche **Require status checks to pass before merging**
+5. Cherche et ajoute le status check : **`pr-quiz`**
+6. Sauvegarde
 
-Sans cette etape, le quiz sera informatif mais ne bloquera pas le merge.
+> Sans cette etape, le quiz sera informatif mais ne bloquera pas le merge.
+
+---
+
+## Utilisation
+
+1. Un developpeur ouvre une PR sur ton repo
+2. Quelqu'un commente **`/sphinx`** sur la PR
+3. Le Sphinx genere un quiz et poste un commentaire avec le lien
+4. Le developpeur repond au quiz dans son navigateur
+5. Un commentaire est poste sur la PR avec le resultat :
+   - **Reussi** → status check `success`, merge debloque
+   - **Pas encore reussi** → lien pour reessayer (si tentatives restantes)
+   - **Toutes tentatives epuisees** → status check `failure`, merge bloque
+
+---
+
+## Modifier la configuration
+
+Tu peux modifier les parametres d'un repo deja configure :
+
+1. Va dans **Dashboard > Repos**
+2. Clique **Modifier** sur le repo
+3. Change les parametres (cle Anthropic, nombre de questions, etc.)
+4. Clique **Sauvegarder**
+
+Tu peux aussi :
+- **Reset cle** — genere une nouvelle cle API (l'ancienne est invalidee)
+- **Revoquer** — supprime la configuration et les quiz associes
+
+---
+
+## Comment ca marche sous le capot ?
+
+### Architecture
+
+- **Site central** (`sphinx-ci.vercel.app`) : application Next.js qui genere les quiz via Claude, les heberge, et rapporte les scores a GitHub
+- **GitHub Action** : workflow dans chaque repo protege qui envoie le diff au site quand `/sphinx` est commente
+
+> **Pas besoin de creer une GitHub App.** On utilise une OAuth App GitHub pour le login et le token OAuth de l'utilisateur pour poster les resultats sur les PRs.
+
+### Flow technique
+
+```
+Commentaire /sphinx sur une PR
+  → GitHub Action envoie le diff au hub
+  → Le hub genere N questions via Claude (avec la cle Anthropic de l'utilisateur)
+  → Quiz sauvegarde en DB, status check "pending" sur le commit
+  → Commentaire poste sur la PR avec le lien du quiz
+  → Le dev repond au quiz dans son navigateur
+  → Le hub calcule le score cote serveur
+  → Status check mis a jour (success/failure) via le token OAuth
+  → Commentaire de resultat poste sur la PR
+```
+
+### Securite
+
+- Les reponses correctes ne sont **jamais envoyees au navigateur** avant la soumission
+- Le score est calcule **entierement cote serveur**
+- A chaque tentative echouee, de **nouvelles questions** sont generees (anti-triche)
+- Chaque utilisateur fournit **sa propre cle Anthropic** (pas de cle partagee)
+
+### Stack
+
+- **Framework** : Next.js 14 (App Router)
+- **Base de donnees** : PostgreSQL + Prisma ORM
+- **LLM** : Anthropic Claude (claude-sonnet-4-20250514)
+- **Auth** : NextAuth.js v5 avec GitHub OAuth
+- **Deploiement** : Vercel
 
 ---
 
@@ -162,89 +256,54 @@ Si tu veux heberger ton propre site sphinx-ci :
 
 - Un compte [Vercel](https://vercel.com)
 - Une base de donnees PostgreSQL ([Neon](https://neon.tech), [Supabase](https://supabase.com), ou Vercel Postgres)
-- Une cle API [Anthropic](https://console.anthropic.com)
-- Une [OAuth App GitHub](https://github.com/settings/developers) (voir ci-dessous)
+- Une [OAuth App GitHub](https://github.com/settings/developers)
 
 ### Creer l'OAuth App GitHub
 
 1. Va sur https://github.com/settings/developers
 2. Clique **New OAuth App**
 3. Remplis :
-   - **Application name** : `sphinx-ci` (ou le nom de ton choix)
+   - **Application name** : `sphinx-ci`
    - **Homepage URL** : `https://ton-domaine.vercel.app`
    - **Authorization callback URL** : `https://ton-domaine.vercel.app/api/auth/callback/github`
-4. Apres creation, note le **Client ID** et genere un **Client Secret**
+4. Note le **Client ID** et genere un **Client Secret**
 
-### Variables d'environnement
+### Variables d'environnement Vercel
 
 | Variable | Description |
 |----------|-------------|
 | `DATABASE_URL` | URL de connexion PostgreSQL |
-| `ANTHROPIC_API_KEY` | Cle API Anthropic |
 | `NEXT_PUBLIC_APP_URL` | URL publique du site |
 | `GITHUB_CLIENT_ID` | Client ID de l'OAuth App |
 | `GITHUB_CLIENT_SECRET` | Client Secret de l'OAuth App |
-| `AUTH_SECRET` | Secret pour les sessions (generer avec `openssl rand -base64 32`) |
+| `AUTH_SECRET` | Secret pour les sessions (`openssl rand -base64 32`) |
 
 ### Deploiement
 
 ```bash
-git clone https://github.com/votre-org/sphinx-ci.git
+git clone https://github.com/AGuyNextDoor/sphinx-ci.git
 cd sphinx-ci
 npm install
-
-# Configurer les variables d'environnement
 cp .env.example .env
-# Editer .env avec vos valeurs
+# Editer .env avec tes valeurs
 
 # Initialiser la base de donnees
-npx prisma migrate dev --name init
+npx prisma migrate deploy
 
 # Lancer en local
 npm run dev
 ```
 
-Pour deployer sur Vercel : connecter le repo depuis le dashboard Vercel et configurer les variables d'environnement.
+Pour deployer sur Vercel : connecte le repo depuis le dashboard Vercel et configure les variables d'environnement.
 
 ---
 
-## FAQ
+## Depannage
 
-### Faut-il creer une GitHub App ?
-
-**Non.** sphinx-ci utilise deux mecanismes distincts :
-- **OAuth App GitHub** : pour la connexion des utilisateurs sur le site (login avec GitHub)
-- **`GITHUB_TOKEN`** : le token automatique de GitHub Actions, pour poster les status checks et commentaires sur les PR
-
-Tu n'as pas besoin d'une GitHub App (avec installation, webhooks, etc.).
-
-### Quelle est la difference entre OAuth App et GitHub App ?
-
-- **OAuth App** : authentifie un utilisateur. C'est ce que sphinx-ci utilise pour le login. Tu en crees une dans les settings GitHub.
-- **GitHub App** : s'installe sur des repos avec des permissions granulaires. sphinx-ci n'en a pas besoin car le `GITHUB_TOKEN` des Actions suffit.
-
-### Que se passe-t-il pour les PR sans code (docs, config) ?
-
-Le workflow filtre le diff par extensions de fichiers code (`.js`, `.ts`, `.py`, etc.). Si le diff filtre est vide ou tres court (< 50 caracteres), le hub retourne `skipped: true` et le status check passe automatiquement.
-
-### Que se passe-t-il si Claude est indisponible ?
-
-Le hub a un timeout de 30 secondes. En cas d'echec, il retourne une erreur 503 et **ne bloque pas la PR** (fail-open).
-
-### Les reponses correctes sont-elles visibles dans le navigateur ?
-
-Non. Les reponses correctes ne sont jamais envoyees au client avant la soumission. Le calcul du score se fait entierement cote serveur.
-
-### Le diff est-il stocke ?
-
-Oui, en clair dans la base de donnees (necessaire pour regenerer les questions). Si votre code est sensible, deployez votre propre instance.
-
----
-
-## Stack technique
-
-- **Framework** : Next.js 14 (App Router)
-- **Base de donnees** : PostgreSQL + Prisma ORM
-- **LLM** : Anthropic Claude (claude-sonnet-4-20250514)
-- **Auth** : NextAuth.js v5 avec GitHub OAuth
-- **Deploiement** : Vercel
+| Probleme | Solution |
+|----------|----------|
+| Le workflow ne se declenche pas | Verifie que `pr-quiz.yml` est sur la branche principale et que le commentaire contient le keyword (`/sphinx`) |
+| Erreur `exit code 22` | Verifie `PR_QUIZ_API_KEY` (secret) et `PR_QUIZ_HUB_URL` (variable) dans les settings GitHub |
+| Erreur `exit code 7` | `PR_QUIZ_HUB_URL` pointe vers `localhost` au lieu de l'URL Vercel |
+| Pas de commentaire de resultat | Deconnecte/reconnecte-toi sur sphinx-ci pour rafraichir le token OAuth |
+| `undefined` dans l'URL du quiz | Ajoute `NEXT_PUBLIC_APP_URL` dans les variables d'environnement Vercel |

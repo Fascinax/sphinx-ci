@@ -65,7 +65,7 @@ export default async function QuizzesPage() {
                       <span className="text-white">
                         #{quiz.prNumber}
                       </span>
-                      <span className="text-gray-500 ml-2 truncate max-w-[200px] inline-block align-bottom">
+                      <span className="text-gray-400 ml-2 truncate max-w-[200px] inline-block align-bottom">
                         {quiz.prTitle}
                       </span>
                     </td>
@@ -79,7 +79,7 @@ export default async function QuizzesPage() {
                     <td className="px-4 py-3 text-gray-300">
                       {quiz.score !== null ? `${quiz.score}%` : "—"}
                     </td>
-                    <td className="px-4 py-3 text-gray-500">
+                    <td className="px-4 py-3 text-gray-400">
                       {new Date(quiz.createdAt).toLocaleDateString("fr-FR")}
                     </td>
                     <td className="px-4 py-3">

@@ -11,7 +11,6 @@ export async function POST(request: NextRequest) {
 
   let body: {
     repo: string;
-    anthropicApiKey: string;
     config?: {
       numQuestions?: number;
       passingScore?: number;
@@ -30,14 +29,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing repo field" }, { status: 400 });
   }
 
-  if (!body.anthropicApiKey || typeof body.anthropicApiKey !== "string") {
-    return NextResponse.json(
-      { error: "Missing anthropicApiKey field" },
-      { status: 400 }
-    );
-  }
-
-  // Check if already configured
   const existing = await prisma.team.findFirst({
     where: { name: body.repo, userId: session.user.id },
   });
@@ -64,7 +55,6 @@ export async function POST(request: NextRequest) {
       name: body.repo,
       apiKey,
       userId: session.user.id,
-      anthropicApiKey: body.anthropicApiKey,
       quizConfig,
     },
   });

@@ -20,7 +20,6 @@ export async function PUT(
   }
 
   let body: {
-    anthropicApiKey?: string;
     config?: {
       numQuestions?: number;
       passingScore?: number;
@@ -36,10 +35,6 @@ export async function PUT(
   }
 
   const updateData: Record<string, unknown> = {};
-
-  if (body.anthropicApiKey) {
-    updateData.anthropicApiKey = body.anthropicApiKey;
-  }
 
   if (body.config) {
     const currentConfig = (team.quizConfig as Record<string, unknown>) || {};

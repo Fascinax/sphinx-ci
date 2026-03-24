@@ -18,7 +18,7 @@ export default function LoginPage() {
             </span>
           </Link>
           <h1 className="text-2xl font-bold text-white mb-2">Connexion</h1>
-          <p style={{ color: "#8b85a0" }}>
+          <p style={{ color: "#b0a8c4" }}>
             Connecte-toi avec GitHub pour acceder a ton dashboard.
           </p>
         </div>
@@ -45,13 +45,13 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-xs text-center mt-4" style={{ color: "#5e5878" }}>
+          <p className="text-xs text-center mt-4" style={{ color: "#8b85a0" }}>
             En te connectant, tu autorises sphinx-ci a lire ton profil GitHub.
           </p>
         </div>
 
-        <p className="text-xs text-center mt-6" style={{ color: "#5e5878" }}>
-          <Link href="/" className="hover:underline" style={{ color: "#8b85a0" }}>
+        <p className="text-xs text-center mt-6" style={{ color: "#8b85a0" }}>
+          <Link href="/" className="hover:underline" style={{ color: "#b0a8c4" }}>
             ← Retour a l&apos;accueil
           </Link>
         </p>

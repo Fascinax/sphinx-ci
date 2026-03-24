@@ -50,6 +50,7 @@ jobs:
         env:
           PR_QUIZ_API_KEY: ${{ secrets.PR_QUIZ_API_KEY }}
           PR_QUIZ_HUB_URL: ${{ vars.PR_QUIZ_HUB_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           HEAD_SHA="${{ steps.pr.outputs.head_sha }}"
@@ -75,7 +76,8 @@ jobs:
               \"pr_title\": $(echo "$PR_TITLE" | jq -Rs .),
               \"diff\": $(echo "$DIFF" | jq -Rs .),
               \"files_changed\": $(echo "$FILES" | jq -Rs 'split(",")'),
-              \"callback_token\": \"$GITHUB_TOKEN\"
+              \"callback_token\": \"$GITHUB_TOKEN\",
+              \"anthropic_api_key\": \"$ANTHROPIC_API_KEY\"
             }")
 
           QUIZ_URL=$(echo $RESPONSE | jq -r '.quiz_url')

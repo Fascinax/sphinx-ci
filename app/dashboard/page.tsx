@@ -96,7 +96,7 @@ export default async function DashboardPage() {
                   <div className="flex items-start justify-between mb-2">
                     <div>
                       <p className="text-white font-medium">{team.name}</p>
-                      <p className="text-sm text-gray-500 font-mono">
+                      <p className="text-sm text-gray-400 font-mono">
                         {team.apiKey.slice(0, 12)}...{team.apiKey.slice(-6)}
                       </p>
                     </div>

@@ -176,7 +176,7 @@ export default function QuizResult({
                       {q.options[r.right_answer]}
                     </span>
                   </p>
-                  <p className="text-xs text-gray-500 italic">
+                  <p className="text-xs text-gray-400 italic">
                     {r.explanation}
                   </p>
                 </div>

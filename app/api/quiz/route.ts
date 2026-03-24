@@ -13,14 +13,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
   }
 
-  // Check team has Anthropic API key
-  if (!team.anthropicApiKey) {
-    return NextResponse.json(
-      { error: "No Anthropic API key configured for this team. Set it in the dashboard." },
-      { status: 400 }
-    );
-  }
-
   // Rate limiting: 10 requests/hour per API key
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
   const recentQuizCount = await prisma.quiz.count({
@@ -45,6 +37,7 @@ export async function POST(request: NextRequest) {
     diff: string;
     files_changed: string[];
     callback_token: string;
+    anthropic_api_key?: string;
   };
 
   try {
@@ -53,13 +46,30 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { repo, pr_number, head_sha, pr_title, diff, files_changed, callback_token } = body;
+  const { repo, pr_number, head_sha, pr_title, diff, files_changed, callback_token, anthropic_api_key } = body;
 
   if (!repo || !pr_number || !head_sha || !pr_title || !callback_token) {
     return NextResponse.json(
       { error: "Missing required fields: repo, pr_number, head_sha, pr_title, callback_token" },
       { status: 400 }
     );
+  }
+
+  // Anthropic key: from request body (Action secret) or fallback to team's stored key
+  const anthropicKey = anthropic_api_key || team.anthropicApiKey;
+  if (!anthropicKey) {
+    return NextResponse.json(
+      { error: "No Anthropic API key provided. Add ANTHROPIC_API_KEY as a secret in your repo." },
+      { status: 400 }
+    );
+  }
+
+  // Store/update the key on the team for regeneration later
+  if (anthropic_api_key && anthropic_api_key !== team.anthropicApiKey) {
+    await prisma.team.update({
+      where: { id: team.id },
+      data: { anthropicApiKey: anthropic_api_key },
+    }).catch(() => {});
   }
 
   // Skip if no meaningful diff
@@ -73,14 +83,14 @@ export async function POST(request: NextRequest) {
     ...(team.quizConfig as Partial<QuizConfig> || {}),
   };
 
-  // Generate questions via Claude with team's API key
+  // Generate questions via Claude
   let questions;
   try {
     questions = await generateQuizQuestions(
       pr_title,
       files_changed || [],
       diff.slice(0, 12000),
-      team.anthropicApiKey,
+      anthropicKey,
       config
     );
   } catch (error) {
@@ -117,7 +127,7 @@ export async function POST(request: NextRequest) {
       "pending",
       config.language === "en"
         ? "Quiz pending — complete it to unlock merge"
-        : "Quiz en attente — complétez-le pour débloquer le merge"
+        : "Quiz en attente — completez-le pour debloquer le merge"
     );
   } catch (error) {
     console.error("Failed to post GitHub status:", error);

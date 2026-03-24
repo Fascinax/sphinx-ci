@@ -128,7 +128,7 @@ export default function QuizPlayer({
       <div className="mb-6">
         <p className="text-sm text-gray-400 mb-1">{repo}</p>
         <h1 className="text-xl font-bold text-white mb-2">{prTitle}</h1>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-400">
           Tentative {attempts + 1}/{maxAttempts}
         </p>
       </div>
@@ -236,7 +236,7 @@ export default function QuizPlayer({
         </div>
       )}
 
-      <p className="text-center text-sm text-gray-500 mt-6">
+      <p className="text-center text-sm text-gray-400 mt-6">
         {answeredCount}/{questions.length} réponses confirmées
       </p>
     </div>
