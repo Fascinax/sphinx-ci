@@ -32,6 +32,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.githubId = ghProfile.id;
         token.githubLogin = ghProfile.login;
 
+        // Force update the OAuth token in DB so it has the latest scopes
+        if (account.access_token) {
+          await prisma.account.updateMany({
+            where: {
+              provider: "github",
+              providerAccountId: account.providerAccountId,
+            },
+            data: {
+              access_token: account.access_token,
+              scope: account.scope,
+            },
+          }).catch(() => {});
+        }
+
         if (token.sub) {
           await prisma.user.update({
             where: { id: token.sub },
