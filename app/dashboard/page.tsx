@@ -5,6 +5,14 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+interface QuizConfig {
+  numQuestions?: number;
+  passingScore?: number;
+  maxAttempts?: number;
+  language?: string;
+  keyword?: string;
+}
+
 export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
@@ -35,64 +43,87 @@ export default async function DashboardPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-          <p className="text-sm text-gray-400">Cles API</p>
+        <div className="rounded-lg p-4 border" style={{ background: "#1a1628", borderColor: "#252036" }}>
+          <p className="text-sm text-gray-400">Repos configures</p>
           <p className="text-2xl font-bold text-white">{teams.length}</p>
         </div>
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+        <div className="rounded-lg p-4 border" style={{ background: "#1a1628", borderColor: "#252036" }}>
           <p className="text-sm text-gray-400">Quiz total</p>
           <p className="text-2xl font-bold text-white">{totalQuizzes}</p>
         </div>
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+        <div className="rounded-lg p-4 border" style={{ background: "#1a1628", borderColor: "#252036" }}>
           <p className="text-sm text-gray-400">Taux de reussite</p>
-          <p className="text-2xl font-bold text-green-400">{passRate}%</p>
+          <p className="text-2xl font-bold" style={{ color: "#c9a84c" }}>{passRate}%</p>
         </div>
       </div>
 
       {/* API Keys */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">Tes cles API</h2>
+          <h2 className="text-lg font-semibold text-white">Tes repos</h2>
           <Link
             href="/dashboard/repos"
-            className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            className="text-sm px-4 py-2 font-medium rounded-lg transition-all"
+            style={{ background: "#c9a84c", color: "#0f0c1a" }}
           >
             + Configurer un repo
           </Link>
         </div>
 
         {teams.length === 0 ? (
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 text-center">
+          <div className="rounded-lg p-6 text-center border" style={{ background: "#1a1628", borderColor: "#252036" }}>
             <p className="text-gray-400 mb-3">
-              Aucune cle API. Configure ton premier repo pour commencer.
+              Aucun repo configure. Ajoute ton premier repo pour commencer.
             </p>
             <Link
               href="/dashboard/repos"
-              className="text-blue-400 hover:text-blue-300 text-sm"
+              className="text-sm"
+              style={{ color: "#c9a84c" }}
             >
               Voir tes repos →
             </Link>
           </div>
         ) : (
           <div className="space-y-3">
-            {teams.map((team) => (
-              <div
-                key={team.id}
-                className="bg-gray-800 border border-gray-700 rounded-lg p-4 flex items-center justify-between"
-              >
-                <div>
-                  <p className="text-white font-medium">{team.name}</p>
-                  <p className="text-sm text-gray-500 font-mono">
-                    {team.apiKey.slice(0, 12)}...{team.apiKey.slice(-6)}
-                  </p>
+            {teams.map((team) => {
+              const config = (team.quizConfig || {}) as QuizConfig;
+              return (
+                <div
+                  key={team.id}
+                  className="rounded-lg p-4 border"
+                  style={{ background: "#1a1628", borderColor: "#252036" }}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <p className="text-white font-medium">{team.name}</p>
+                      <p className="text-sm text-gray-500 font-mono">
+                        {team.apiKey.slice(0, 12)}...{team.apiKey.slice(-6)}
+                      </p>
+                    </div>
+                    <p className="text-sm text-gray-400">
+                      {team._count.quizzes} quiz
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <span className="text-xs px-2 py-1 rounded" style={{ background: "rgba(201,168,76,0.1)", color: "#c9a84c" }}>
+                      {config.numQuestions || 10} questions
+                    </span>
+                    <span className="text-xs px-2 py-1 rounded" style={{ background: "rgba(201,168,76,0.1)", color: "#c9a84c" }}>
+                      Score min {config.passingScore || 70}%
+                    </span>
+                    <span className="text-xs px-2 py-1 rounded" style={{ background: "rgba(201,168,76,0.1)", color: "#c9a84c" }}>
+                      {config.maxAttempts || 3} tentatives
+                    </span>
+                    <span className="text-xs px-2 py-1 rounded" style={{ background: "rgba(201,168,76,0.1)", color: "#c9a84c" }}>
+                      {config.language === "en" ? "EN" : "FR"}
+                    </span>
+                    <span className="text-xs px-2 py-1 rounded" style={{ background: "rgba(201,168,76,0.1)", color: "#c9a84c" }}>
+                      {config.keyword || "/sphinx"}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-400">
-                    {team._count.quizzes} quiz
-                  </p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

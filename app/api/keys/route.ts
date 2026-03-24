@@ -9,7 +9,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { repo: string };
+  let body: {
+    repo: string;
+    anthropicApiKey: string;
+    config?: {
+      numQuestions?: number;
+      passingScore?: number;
+      maxAttempts?: number;
+      language?: "fr" | "en";
+      keyword?: string;
+    };
+  };
   try {
     body = await request.json();
   } catch {
@@ -17,8 +27,12 @@ export async function POST(request: NextRequest) {
   }
 
   if (!body.repo || typeof body.repo !== "string") {
+    return NextResponse.json({ error: "Missing repo field" }, { status: 400 });
+  }
+
+  if (!body.anthropicApiKey || typeof body.anthropicApiKey !== "string") {
     return NextResponse.json(
-      { error: "Missing repo field" },
+      { error: "Missing anthropicApiKey field" },
       { status: 400 }
     );
   }
@@ -37,11 +51,21 @@ export async function POST(request: NextRequest) {
 
   const apiKey = `spx_${randomBytes(24).toString("hex")}`;
 
+  const quizConfig = {
+    numQuestions: body.config?.numQuestions ?? 10,
+    passingScore: body.config?.passingScore ?? 70,
+    maxAttempts: body.config?.maxAttempts ?? 3,
+    language: body.config?.language ?? "fr",
+    keyword: body.config?.keyword ?? "/sphinx",
+  };
+
   const team = await prisma.team.create({
     data: {
       name: body.repo,
       apiKey,
       userId: session.user.id,
+      anthropicApiKey: body.anthropicApiKey,
+      quizConfig,
     },
   });
 

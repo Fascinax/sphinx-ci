@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { generateQuizQuestions } from "@/lib/claude";
+import { generateQuizQuestions, DEFAULT_QUIZ_CONFIG } from "@/lib/claude";
+import type { QuizConfig } from "@/lib/claude";
 
 export async function GET(
   _request: NextRequest,
@@ -8,7 +9,10 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  const quiz = await prisma.quiz.findUnique({ where: { id } });
+  const quiz = await prisma.quiz.findUnique({
+    where: { id },
+    include: { team: { select: { anthropicApiKey: true, quizConfig: true } } },
+  });
   if (!quiz) {
     return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
   }
@@ -31,12 +35,26 @@ export async function GET(
     );
   }
 
+  if (!quiz.team.anthropicApiKey) {
+    return NextResponse.json(
+      { error: "No Anthropic API key configured" },
+      { status: 400 }
+    );
+  }
+
+  const config: QuizConfig = {
+    ...DEFAULT_QUIZ_CONFIG,
+    ...(quiz.team.quizConfig as Partial<QuizConfig> || {}),
+  };
+
   try {
     const filesChanged = quiz.repo ? [quiz.repo] : [];
     const questions = await generateQuizQuestions(
       quiz.prTitle,
       filesChanged,
-      quiz.diff
+      quiz.diff,
+      quiz.team.anthropicApiKey,
+      config
     );
 
     await prisma.quiz.update({

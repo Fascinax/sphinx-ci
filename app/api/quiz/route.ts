@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateApiKey } from "@/lib/auth";
-import { generateQuizQuestions } from "@/lib/claude";
+import { generateQuizQuestions, DEFAULT_QUIZ_CONFIG } from "@/lib/claude";
+import type { QuizConfig } from "@/lib/claude";
 import { updateCommitStatus } from "@/lib/github";
 import { prisma } from "@/lib/db";
 
@@ -10,6 +11,14 @@ export async function POST(request: NextRequest) {
   const team = await validateApiKey(apiKey);
   if (!team) {
     return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
+  }
+
+  // Check team has Anthropic API key
+  if (!team.anthropicApiKey) {
+    return NextResponse.json(
+      { error: "No Anthropic API key configured for this team. Set it in the dashboard." },
+      { status: 400 }
+    );
   }
 
   // Rate limiting: 10 requests/hour per API key
@@ -58,13 +67,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ quiz_url: null, skipped: true });
   }
 
-  // Generate questions via Claude
+  // Load team config
+  const config: QuizConfig = {
+    ...DEFAULT_QUIZ_CONFIG,
+    ...(team.quizConfig as Partial<QuizConfig> || {}),
+  };
+
+  // Generate questions via Claude with team's API key
   let questions;
   try {
     questions = await generateQuizQuestions(
       pr_title,
       files_changed || [],
-      diff.slice(0, 12000)
+      diff.slice(0, 12000),
+      team.anthropicApiKey,
+      config
     );
   } catch (error) {
     console.error("Claude generation failed:", error);
@@ -86,19 +103,21 @@ export async function POST(request: NextRequest) {
       diff: diff.slice(0, 12000),
       questions: JSON.parse(JSON.stringify(questions)),
       callbackToken: callback_token,
+      maxAttempts: config.maxAttempts,
       expiresAt,
     },
   });
 
   // Post pending status on GitHub
   try {
-    const quizUrl = `${process.env.NEXT_PUBLIC_APP_URL}/q/${quiz.id}`;
     await updateCommitStatus(
       repo,
       head_sha,
       callback_token,
       "pending",
-      "Quiz en attente — complétez-le pour débloquer le merge"
+      config.language === "en"
+        ? "Quiz pending — complete it to unlock merge"
+        : "Quiz en attente — complétez-le pour débloquer le merge"
     );
   } catch (error) {
     console.error("Failed to post GitHub status:", error);

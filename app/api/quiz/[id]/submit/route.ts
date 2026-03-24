@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { updateCommitStatus } from "@/lib/github";
+import { DEFAULT_QUIZ_CONFIG } from "@/lib/claude";
+import type { QuizConfig } from "@/lib/claude";
 
 interface QuizQuestion {
   id: number;
@@ -16,7 +18,10 @@ export async function POST(
 ) {
   const { id } = await params;
 
-  const quiz = await prisma.quiz.findUnique({ where: { id } });
+  const quiz = await prisma.quiz.findUnique({
+    where: { id },
+    include: { team: { select: { quizConfig: true } } },
+  });
   if (!quiz) {
     return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
   }
@@ -43,6 +48,14 @@ export async function POST(
     );
   }
 
+  const config: QuizConfig = {
+    ...DEFAULT_QUIZ_CONFIG,
+    ...(quiz.team.quizConfig as Partial<QuizConfig> || {}),
+  };
+
+  const questions = quiz.questions as unknown as QuizQuestion[];
+  const numQuestions = questions.length;
+
   let body: { answers: number[] };
   try {
     body = await request.json();
@@ -51,14 +64,13 @@ export async function POST(
   }
 
   const { answers } = body;
-  if (!Array.isArray(answers) || answers.length !== 10) {
+  if (!Array.isArray(answers) || answers.length !== numQuestions) {
     return NextResponse.json(
-      { error: "answers must be an array of 10 numbers" },
+      { error: `answers must be an array of ${numQuestions} numbers` },
       { status: 400 }
     );
   }
 
-  const questions = quiz.questions as unknown as QuizQuestion[];
   let correctCount = 0;
   const results = questions.map((q, i) => {
     const isCorrect = answers[i] === q.correct;
@@ -72,11 +84,11 @@ export async function POST(
     };
   });
 
-  const score = Math.round((correctCount / 10) * 100);
+  const score = Math.round((correctCount / numQuestions) * 100);
   const newAttempts = quiz.attempts + 1;
 
   let newStatus: "PENDING" | "PASSED" | "FAILED" = "PENDING";
-  if (score >= 70) {
+  if (score >= config.passingScore) {
     newStatus = "PASSED";
   } else if (newAttempts >= quiz.maxAttempts) {
     newStatus = "FAILED";
@@ -100,7 +112,9 @@ export async function POST(
         quiz.headSha,
         quiz.callbackToken,
         "success",
-        `Quiz réussi — score ${score}/100`
+        config.language === "en"
+          ? `Quiz passed — score ${score}/100`
+          : `Quiz réussi — score ${score}/100`
       );
     } else if (newStatus === "FAILED") {
       await updateCommitStatus(
@@ -108,7 +122,9 @@ export async function POST(
         quiz.headSha,
         quiz.callbackToken,
         "failure",
-        `Quiz échoué — score ${score}/100 (max tentatives atteint)`
+        config.language === "en"
+          ? `Quiz failed — score ${score}/100 (max attempts reached)`
+          : `Quiz échoué — score ${score}/100 (max tentatives atteint)`
       );
     }
   } catch (error) {
@@ -119,7 +135,7 @@ export async function POST(
     score,
     passed: newStatus === "PASSED",
     correct: correctCount,
-    total: 10,
+    total: numQuestions,
     attempts_remaining:
       newStatus === "PENDING" ? quiz.maxAttempts - newAttempts : 0,
     results,

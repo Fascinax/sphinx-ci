@@ -13,6 +13,11 @@ interface RepoCardProps {
   teamId?: string;
 }
 
+const selectClass =
+  "w-full px-3 py-2 rounded-lg text-sm text-white border border-gray-600 bg-gray-900 focus:border-[#c9a84c] focus:outline-none";
+const inputClass = selectClass;
+const labelClass = "block text-xs text-gray-400 mb-1";
+
 export default function RepoCard({
   repoFullName,
   repoName,
@@ -29,14 +34,39 @@ export default function RepoCard({
   const [loading, setLoading] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [error, setError] = useState("");
+
+  // Form state
+  const [anthropicKey, setAnthropicKey] = useState("");
+  const [numQuestions, setNumQuestions] = useState(10);
+  const [passingScore, setPassingScore] = useState(70);
+  const [maxAttempts, setMaxAttempts] = useState(3);
+  const [quizLanguage, setQuizLanguage] = useState<"fr" | "en">("fr");
+  const [keyword, setKeyword] = useState("/sphinx");
 
   async function handleConfigure() {
+    if (!anthropicKey.trim()) {
+      setError("La cle Anthropic API est obligatoire.");
+      return;
+    }
+    setError("");
     setLoading(true);
     try {
       const res = await fetch("/api/keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repo: repoFullName }),
+        body: JSON.stringify({
+          repo: repoFullName,
+          anthropicApiKey: anthropicKey,
+          config: {
+            numQuestions,
+            passingScore,
+            maxAttempts,
+            language: quizLanguage,
+            keyword,
+          },
+        }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -44,9 +74,13 @@ export default function RepoCard({
         setTeamId(data.id);
         setConfigured(true);
         setShowKey(true);
+        setShowForm(false);
       } else if (res.status === 409) {
         setApiKey(data.apiKey);
         setConfigured(true);
+        setShowForm(false);
+      } else {
+        setError(data.error || "Erreur lors de la configuration.");
       }
     } finally {
       setLoading(false);
@@ -54,7 +88,12 @@ export default function RepoCard({
   }
 
   async function handleRevoke() {
-    if (!confirm(`Revoquer la cle API pour ${repoFullName} ? Les quiz existants seront supprimes.`)) return;
+    if (
+      !confirm(
+        `Revoquer la cle API pour ${repoFullName} ? Les quiz existants seront supprimes.`
+      )
+    )
+      return;
     setLoading(true);
     try {
       const res = await fetch(`/api/keys/${teamId}`, { method: "DELETE" });
@@ -63,6 +102,7 @@ export default function RepoCard({
         setApiKey("");
         setTeamId("");
         setShowKey(false);
+        setAnthropicKey("");
       }
     } finally {
       setLoading(false);
@@ -76,7 +116,10 @@ export default function RepoCard({
   }
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+    <div
+      className="rounded-lg p-4 border"
+      style={{ background: "#1a1628", borderColor: "#252036" }}
+    >
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
@@ -100,28 +143,150 @@ export default function RepoCard({
         </div>
 
         <div className="ml-4 flex-shrink-0">
-          {!configured ? (
+          {!configured && !showForm ? (
             <button
-              onClick={handleConfigure}
-              disabled={loading}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm rounded-lg transition-colors"
+              onClick={() => setShowForm(true)}
+              className="px-4 py-2 text-sm font-medium rounded-lg transition-all"
+              style={{ background: "#c9a84c", color: "#0f0c1a" }}
             >
-              {loading ? "..." : "Configurer"}
+              Configurer
             </button>
-          ) : (
-            <span className="px-3 py-1 text-xs font-medium text-green-400 bg-green-400/10 rounded">
+          ) : configured ? (
+            <span
+              className="px-3 py-1 text-xs font-medium rounded"
+              style={{ color: "#c9a84c", background: "rgba(201,168,76,0.1)" }}
+            >
               Configure
             </span>
-          )}
+          ) : null}
         </div>
       </div>
 
+      {/* Configuration form */}
+      {showForm && !configured && (
+        <div className="mt-4 pt-4 border-t" style={{ borderColor: "#252036" }}>
+          <div className="space-y-3">
+            {/* Anthropic API Key */}
+            <div>
+              <label className={labelClass}>
+                Cle Anthropic API *
+              </label>
+              <input
+                type="password"
+                value={anthropicKey}
+                onChange={(e) => setAnthropicKey(e.target.value)}
+                placeholder="sk-ant-..."
+                className={inputClass}
+              />
+            </div>
+
+            {/* Settings grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div>
+                <label className={labelClass}>Questions</label>
+                <select
+                  value={numQuestions}
+                  onChange={(e) => setNumQuestions(Number(e.target.value))}
+                  className={selectClass}
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={15}>15</option>
+                  <option value={20}>20</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Score min</label>
+                <select
+                  value={passingScore}
+                  onChange={(e) => setPassingScore(Number(e.target.value))}
+                  className={selectClass}
+                >
+                  <option value={50}>50%</option>
+                  <option value={60}>60%</option>
+                  <option value={70}>70%</option>
+                  <option value={80}>80%</option>
+                  <option value={90}>90%</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Tentatives</label>
+                <select
+                  value={maxAttempts}
+                  onChange={(e) => setMaxAttempts(Number(e.target.value))}
+                  className={selectClass}
+                >
+                  <option value={1}>1</option>
+                  <option value={2}>2</option>
+                  <option value={3}>3</option>
+                  <option value={4}>4</option>
+                  <option value={5}>5</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Langue</label>
+                <select
+                  value={quizLanguage}
+                  onChange={(e) =>
+                    setQuizLanguage(e.target.value as "fr" | "en")
+                  }
+                  className={selectClass}
+                >
+                  <option value="fr">Francais</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Keyword */}
+            <div>
+              <label className={labelClass}>
+                Keyword declencheur (dans un commentaire PR)
+              </label>
+              <input
+                type="text"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder="/sphinx"
+                className={inputClass}
+              />
+            </div>
+
+            {error && (
+              <p className="text-xs text-red-400">{error}</p>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleConfigure}
+                disabled={loading}
+                className="px-4 py-2 text-sm font-medium rounded-lg transition-all disabled:opacity-50"
+                style={{ background: "#c9a84c", color: "#0f0c1a" }}
+              >
+                {loading ? "..." : "Generer la cle API"}
+              </button>
+              <button
+                onClick={() => setShowForm(false)}
+                className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* API Key section */}
       {configured && apiKey && (
-        <div className="mt-3 pt-3 border-t border-gray-700">
+        <div className="mt-3 pt-3 border-t" style={{ borderColor: "#252036" }}>
           <div className="flex items-center gap-2">
-            <code className="flex-1 text-xs text-gray-400 bg-gray-900 px-3 py-2 rounded font-mono truncate">
-              {showKey ? apiKey : `${apiKey.slice(0, 12)}...${ apiKey.slice(-6)}`}
+            <code
+              className="flex-1 text-xs text-gray-400 px-3 py-2 rounded font-mono truncate"
+              style={{ background: "#0f0c1a" }}
+            >
+              {showKey
+                ? apiKey
+                : `${apiKey.slice(0, 12)}...${apiKey.slice(-6)}`}
             </code>
             <button
               onClick={() => setShowKey(!showKey)}
@@ -131,7 +296,8 @@ export default function RepoCard({
             </button>
             <button
               onClick={handleCopy}
-              className="text-xs text-blue-400 hover:text-blue-300 px-2 py-2"
+              className="text-xs px-2 py-2"
+              style={{ color: "#c9a84c" }}
             >
               {copied ? "Copie !" : "Copier"}
             </button>
@@ -144,8 +310,9 @@ export default function RepoCard({
             </button>
           </div>
           <p className="text-xs text-gray-600 mt-2">
-            Ajoute cette cle comme secret <code className="text-gray-500">PR_QUIZ_API_KEY</code> dans
-            Settings &gt; Secrets and variables &gt; Actions de ton repo.
+            Ajoute cette cle comme secret{" "}
+            <code className="text-gray-500">PR_QUIZ_API_KEY</code> dans Settings
+            &gt; Secrets and variables &gt; Actions de ton repo.
           </p>
         </div>
       )}
