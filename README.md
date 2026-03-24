@@ -193,6 +193,35 @@ Pour que le quiz **bloque reellement** le merge :
 
 ---
 
+## Equipes et organisations
+
+sphinx-ci fonctionne avec les repos d'organisation GitHub. Un seul admin configure le tout, et tous les devs de l'equipe passent les quiz.
+
+### Comment ca marche en equipe
+
+1. **Un admin** se connecte sur sphinx-ci et configure le repo (genere la cle API, choisit les parametres)
+2. **L'admin** ajoute les secrets dans les settings GitHub du repo (`PR_QUIZ_API_KEY`, `ANTHROPIC_API_KEY`) et le workflow
+3. **Tous les devs** de l'equipe peuvent declencher et passer les quiz — il suffit d'avoir acces au repo
+
+Les devs n'ont pas besoin de se connecter sur sphinx-ci. Seul l'admin qui configure a besoin d'un compte.
+
+### Acceder aux repos d'une organisation
+
+Par defaut, tu ne verras que tes repos personnels dans le dashboard. Pour voir les repos d'une organisation :
+
+1. Va sur https://github.com/settings/applications
+2. Trouve **sphinx-ci** dans la liste
+3. Clique dessus et demande l'acces (**Request** ou **Grant**) pour ton organisation
+4. Un admin de l'organisation doit approuver la demande
+
+Alternativement, un admin de l'org peut pre-approuver l'app :
+1. Aller dans **Organization settings > Third-party access**
+2. Approuver sphinx-ci
+
+Une fois approuve, les repos de l'org apparaitront dans ton dashboard.
+
+---
+
 ## Modifier la configuration
 
 Tu peux modifier les parametres d'un repo deja configure :
@@ -307,3 +336,4 @@ Pour deployer sur Vercel : connecte le repo depuis le dashboard Vercel et config
 | Erreur `exit code 7` | `PR_QUIZ_HUB_URL` pointe vers `localhost` au lieu de l'URL Vercel |
 | Pas de commentaire de resultat | Deconnecte/reconnecte-toi sur sphinx-ci pour rafraichir le token OAuth |
 | `undefined` dans l'URL du quiz | Ajoute `NEXT_PUBLIC_APP_URL` dans les variables d'environnement Vercel |
+| Repos d'organisation non visibles | Autorise sphinx-ci pour ton org dans https://github.com/settings/applications |
