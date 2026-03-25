@@ -53,13 +53,13 @@ export default async function LoginPage({
           </form>
 
           <p className="text-xs text-center mt-4" style={{ color: "#8b85a0" }}>
-            En te connectant, tu autorises sphinx-ci a lire ton profil GitHub.
+            En te connectant, tu autorises sphinx-ci à lire ton profil GitHub.
           </p>
         </div>
 
         <p className="text-xs text-center mt-6" style={{ color: "#8b85a0" }}>
           <Link href="/" className="hover:underline" style={{ color: "#b0a8c4" }}>
-            ← Retour a l&apos;accueil
+            ← Retour à l&apos;accueil
           </Link>
         </p>
       </div>

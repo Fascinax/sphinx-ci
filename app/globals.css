@@ -13,3 +13,34 @@ body {
   background-color: var(--bg);
   color: #e5e7eb;
 }
+
+/* Feature cards hover */
+.feature-card {
+  transition: border-color 0.2s, background-color 0.2s;
+}
+.feature-card:hover {
+  border-color: rgba(201, 168, 76, 0.3);
+  background-color: rgba(26, 22, 40, 0.5);
+}
+.feature-card:hover .feature-icon {
+  background: rgba(201, 168, 76, 0.2);
+}
+
+/* Step cards */
+.step-card {
+  transition: border-color 0.2s, transform 0.2s;
+}
+.step-card:hover {
+  border-color: rgba(201, 168, 76, 0.3);
+  transform: translateY(-2px);
+}
+
+/* API key reveal */
+.api-key-hidden {
+  filter: blur(4px);
+  user-select: none;
+  transition: filter 0.2s;
+}
+.api-key-hidden:hover {
+  filter: blur(2px);
+}

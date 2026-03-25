@@ -69,10 +69,10 @@ export default async function QuizPage({
           <div className="max-w-md text-center">
             <div className="text-6xl mb-6">&#x23F3;</div>
             <h1 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "Georgia, serif" }}>
-              Quiz expire
+              Quiz expiré
             </h1>
             <p style={{ color: "#b0a8c4" }}>
-              Ce quiz a expire. Commente <code style={{ color: "#c9a84c" }}>/sphinx</code> sur la PR pour en generer un nouveau.
+              Ce quiz a expiré. Commente <code style={{ color: "#c9a84c" }}>/sphinx</code> sur la PR pour en générer un nouveau.
             </p>
           </div>
         </div>
@@ -89,10 +89,10 @@ export default async function QuizPage({
           <div className="max-w-md text-center">
             <div className="text-6xl mb-6">&#x1F3DB;</div>
             <h1 className="text-2xl font-bold mb-2" style={{ color: "#c9a84c", fontFamily: "Georgia, serif" }}>
-              Quiz reussi — {quiz.score}/100
+              Quiz réussi — {quiz.score}/100
             </h1>
             <p style={{ color: "#b0a8c4" }}>
-              Le merge est debloque.
+              Le merge est débloqué.
             </p>
             <p className="text-sm mt-4" style={{ color: "#8b85a0" }}>
               {quiz.repo} — PR #{quiz.prNumber}
@@ -112,10 +112,10 @@ export default async function QuizPage({
           <div className="max-w-md text-center">
             <div className="text-6xl mb-6">&#x1F480;</div>
             <h1 className="text-2xl font-bold text-red-400 mb-2" style={{ fontFamily: "Georgia, serif" }}>
-              Quiz echoue — {quiz.score}/100
+              Quiz échoué — {quiz.score}/100
             </h1>
             <p style={{ color: "#b0a8c4" }}>
-              Toutes les tentatives ont ete utilisees. Le merge reste bloque.
+              Toutes les tentatives ont été utilisées. Le merge reste bloqué.
             </p>
             <p className="text-sm mt-4" style={{ color: "#8b85a0" }}>
               {quiz.repo} — PR #{quiz.prNumber}

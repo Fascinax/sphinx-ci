@@ -76,7 +76,7 @@ export default function RepoCard({
           setEditing(false);
         } else {
           const data = await res.json();
-          setError(data.error || "Erreur lors de la mise a jour.");
+          setError(data.error || "Erreur lors de la mise à jour.");
         }
       } else {
         const res = await fetch("/api/keys", {
@@ -108,7 +108,7 @@ export default function RepoCard({
   }
 
   async function handleRevoke() {
-    if (!confirm(`Revoquer la cle API pour ${repoFullName} ? Les quiz existants seront supprimes.`)) return;
+    if (!confirm(`Révoquer la clé API pour ${repoFullName} ? Les quiz existants seront supprimés.`)) return;
     setLoading(true);
     try {
       const res = await fetch(`/api/keys/${teamId}`, { method: "DELETE" });
@@ -124,7 +124,7 @@ export default function RepoCard({
   }
 
   async function handleResetKey() {
-    if (!confirm(`Generer une nouvelle cle API pour ${repoFullName} ? L'ancienne cle ne fonctionnera plus.`)) return;
+    if (!confirm(`Générer une nouvelle clé API pour ${repoFullName} ? L'ancienne clé ne fonctionnera plus.`)) return;
     setLoading(true);
     try {
       const res = await fetch(`/api/keys/${teamId}`, { method: "PATCH" });
@@ -181,7 +181,7 @@ export default function RepoCard({
           <div>
             <label className={labelClass}>Langue</label>
             <select value={quizLanguage} onChange={(e) => setQuizLanguage(e.target.value as "fr" | "en")} className={selectClass}>
-              <option value="fr">Francais</option>
+              <option value="fr">Français</option>
               <option value="en">English</option>
             </select>
           </div>
@@ -189,7 +189,7 @@ export default function RepoCard({
 
         {/* Keyword */}
         <div>
-          <label className={labelClass}>Keyword declencheur (dans un commentaire PR)</label>
+          <label className={labelClass}>Keyword déclencheur (dans un commentaire PR)</label>
           <input type="text" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="/sphinx" className={inputClass} />
         </div>
 
@@ -202,7 +202,7 @@ export default function RepoCard({
             className="px-4 py-2 text-sm font-medium rounded-lg transition-all disabled:opacity-50"
             style={{ background: "#c9a84c", color: "#0f0c1a" }}
           >
-            {loading ? "..." : editing ? "Sauvegarder" : "Generer la cle API"}
+            {loading ? "..." : editing ? "Sauvegarder" : "Générer la clé API"}
           </button>
           <button
             onClick={() => { setShowForm(false); setEditing(false); setError(""); }}
@@ -226,7 +226,7 @@ export default function RepoCard({
                 isPrivate ? "text-yellow-400 bg-yellow-400/10" : "text-gray-400 bg-gray-400/10"
               }`}
             >
-              {isPrivate ? "prive" : "public"}
+              {isPrivate ? "privé" : "public"}
             </span>
           </div>
           {description && <p className="text-sm text-gray-400 truncate">{description}</p>}
@@ -255,7 +255,7 @@ export default function RepoCard({
                 className="px-3 py-1 text-xs font-medium rounded"
                 style={{ color: "#c9a84c", background: "rgba(201,168,76,0.1)" }}
               >
-                Configure
+                Configuré
               </span>
             </>
           ) : null}
@@ -269,28 +269,33 @@ export default function RepoCard({
       {configured && apiKey && !showForm && (
         <div className="mt-3 pt-3 border-t" style={{ borderColor: "#252036" }}>
           <div className="flex items-center gap-2">
-            <code
-              className="flex-1 text-xs text-gray-400 px-3 py-2 rounded font-mono truncate"
+            <div
+              className="flex-1 relative px-3 py-2 rounded overflow-hidden cursor-pointer"
               style={{ background: "#0f0c1a" }}
+              onClick={() => setShowKey(!showKey)}
             >
-              {showKey ? apiKey : `${apiKey.slice(0, 12)}...${apiKey.slice(-6)}`}
-            </code>
-            <button onClick={() => setShowKey(!showKey)} className="text-xs text-gray-400 hover:text-gray-300 px-2 py-2">
-              {showKey ? "Masquer" : "Voir"}
-            </button>
+              <code className={`text-xs font-mono ${showKey ? "text-gray-400" : "api-key-hidden text-gray-400"}`}>
+                {apiKey}
+              </code>
+              {!showKey && (
+                <span className="absolute inset-0 flex items-center justify-center text-xs" style={{ color: "#8b85a0" }}>
+                  Cliquer pour révéler
+                </span>
+              )}
+            </div>
             <button onClick={handleCopy} className="text-xs px-2 py-2" style={{ color: "#c9a84c" }}>
-              {copied ? "Copie !" : "Copier"}
+              {copied ? "Copié !" : "Copier"}
             </button>
             <button onClick={handleResetKey} disabled={loading} className="text-xs text-orange-400 hover:text-orange-300 px-2 py-2">
-              Reset cle
+              Reset clé
             </button>
             <button onClick={handleRevoke} disabled={loading} className="text-xs text-red-400 hover:text-red-300 px-2 py-2">
-              Revoquer
+              Révoquer
             </button>
           </div>
           <p className="text-xs mt-2" style={{ color: "#8b85a0" }}>
             Ajoute ce secret dans ton repo : <code className="text-gray-400">PR_QUIZ_API_KEY</code>.
-            Ajoute aussi <code className="text-gray-400">ANTHROPIC_API_KEY</code> avec ta cle Anthropic.
+            Ajoute aussi <code className="text-gray-400">ANTHROPIC_API_KEY</code> avec ta clé Anthropic.
           </p>
         </div>
       )}

@@ -49,7 +49,7 @@ export default async function Home() {
                   className="text-sm transition-colors"
                   style={{ color: "#b0a8c4" }}
                 >
-                  Deconnexion
+                  Déconnexion
                 </button>
               </form>
             </>
@@ -91,8 +91,8 @@ export default async function Home() {
           </h1>
 
           <p className="text-lg md:text-xl mb-10" style={{ color: "#b0a8c4" }}>
-            Bloque le merge tant que le dev n&apos;a pas prouve qu&apos;il comprend
-            son propre code. Quiz IA genere depuis le diff, declenche par un simple commentaire.
+            Bloque le merge tant que le dev n&apos;a pas prouvé qu&apos;il comprend
+            son propre code. Quiz IA généré depuis le diff, déclenché par un simple commentaire.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
@@ -121,7 +121,7 @@ export default async function Home() {
                   className="px-8 py-3.5 text-base font-medium rounded-lg border transition-all"
                   style={{ borderColor: "#252036", color: "#b0a8c4" }}
                 >
-                  Comment ca marche ?
+                  Comment ça marche ?
                 </Link>
               </>
             )}
@@ -151,10 +151,10 @@ export default async function Home() {
       <section id="how-it-works" className="px-4 py-20" style={{ background: "#1a1628" }}>
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl font-bold text-white text-center mb-2" style={{ fontFamily: "Georgia, serif" }}>
-            Comment ca marche ?
+            Comment ça marche ?
           </h2>
           <p className="text-center mb-12" style={{ color: "#b0a8c4" }}>
-            Quatre etapes pour proteger tes repos.
+            Quatre étapes pour protéger tes repos.
           </p>
 
           <div className="grid md:grid-cols-4 gap-5">
@@ -162,7 +162,7 @@ export default async function Home() {
               {
                 step: "I",
                 title: "Connecte-toi",
-                desc: "Connecte-toi avec GitHub et configure sphinx-ci sur les repos de ton choix. Fournis ta cle Anthropic.",
+                desc: "Connecte-toi avec GitHub et configure sphinx-ci sur les repos de ton choix. Fournis ta clé Anthropic.",
               },
               {
                 step: "II",
@@ -172,31 +172,35 @@ export default async function Home() {
               {
                 step: "III",
                 title: "Commente /sphinx",
-                desc: "Sur une PR, commente /sphinx. Un quiz est genere automatiquement depuis le diff.",
+                desc: "Sur une PR, commente /sphinx. Un quiz est généré automatiquement depuis le diff.",
               },
               {
                 step: "IV",
                 title: "Passe le quiz",
-                desc: "Reponds aux questions sur ton code. Score suffisant = merge debloque. Sinon, nouvelles questions.",
+                desc: "Réponds aux questions sur ton code. Score suffisant = merge débloqué. Sinon, nouvelles questions.",
               },
-            ].map((item) => (
-              <div
-                key={item.step}
-                className="rounded-xl p-5 border text-center"
-                style={{ background: "#0f0c1a", borderColor: "#252036" }}
-              >
+            ].map((item, i, arr) => (
+              <div key={item.step} className="flex items-center">
                 <div
-                  className="text-2xl font-bold mb-3"
-                  style={{ color: "#c9a84c", fontFamily: "Georgia, serif" }}
+                  className="step-card rounded-xl p-5 border text-center flex-1"
+                  style={{ background: "#0f0c1a", borderColor: "#252036" }}
                 >
-                  {item.step}
+                  <div
+                    className="text-2xl font-bold mb-3"
+                    style={{ color: "#c9a84c", fontFamily: "Georgia, serif" }}
+                  >
+                    {item.step}
+                  </div>
+                  <h3 className="text-white font-semibold mb-2" style={{ fontFamily: "Georgia, serif" }}>
+                    {item.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed" style={{ color: "#b0a8c4" }}>
+                    {item.desc}
+                  </p>
                 </div>
-                <h3 className="text-white font-semibold mb-2" style={{ fontFamily: "Georgia, serif" }}>
-                  {item.title}
-                </h3>
-                <p className="text-sm leading-relaxed" style={{ color: "#b0a8c4" }}>
-                  {item.desc}
-                </p>
+                {i < arr.length - 1 && (
+                  <div className="hidden md:block mx-1 text-lg" style={{ color: "#c9a84c", opacity: 0.4 }}>&#x25B8;</div>
+                )}
               </div>
             ))}
           </div>
@@ -217,37 +221,37 @@ export default async function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                 ),
                 title: "Anti-triche",
-                desc: "Nouvelles questions a chaque tentative. Les reponses ne sont jamais envoyees au navigateur avant la soumission.",
+                desc: "Nouvelles questions à chaque tentative. Les réponses ne sont jamais envoyées au navigateur avant la soumission.",
               },
               {
                 icon: (
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
                 ),
                 title: "Fail-open",
-                desc: "Si le service est indisponible, la PR n'est pas bloquee. Timeout de 30 secondes.",
+                desc: "Si le service est indisponible, la PR n'est pas bloquée. Timeout de 30 secondes.",
               },
               {
                 icon: (
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
                 ),
                 title: "Setup en 5 min",
-                desc: "Pas de GitHub App a installer. Un workflow YAML, une cle API, et c'est parti.",
+                desc: "Pas de GitHub App à installer. Un workflow YAML, une clé API, et c'est parti.",
               },
               {
                 icon: (
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
                 ),
                 title: "IA contextuelle",
-                desc: "Les questions portent uniquement sur le diff de ta PR. Pas de questions generiques.",
+                desc: "Les questions portent uniquement sur le diff de ta PR. Pas de questions génériques.",
               },
             ].map((feature, i) => (
               <div
                 key={i}
-                className="flex gap-4 rounded-xl p-5 border"
+                className="feature-card flex gap-4 rounded-xl p-5 border"
                 style={{ borderColor: "#252036" }}
               >
                 <div
-                  className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
+                  className="feature-icon flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-colors"
                   style={{ background: "rgba(201,168,76,0.1)" }}
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="#c9a84c">
@@ -275,10 +279,10 @@ export default async function Home() {
           style={{ background: "#1a1628", borderColor: "#252036" }}
         >
           <h2 className="text-3xl font-bold text-white mb-4" style={{ fontFamily: "Georgia, serif" }}>
-            Pret a proteger tes PRs ?
+            Prêt à protéger tes PRs ?
           </h2>
           <p className="mb-8" style={{ color: "#b0a8c4" }}>
-            Gratuit et open source. Configure en 5 minutes.
+            Gratuit et open source. Configuré en 5 minutes.
           </p>
           {isLoggedIn ? (
             <Link

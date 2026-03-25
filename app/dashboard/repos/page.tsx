@@ -46,13 +46,13 @@ export default async function ReposPage() {
         Tes repos
       </h1>
       <p className="text-sm mb-8" style={{ color: "#b0a8c4" }}>
-        Tes repos configures et ceux disponibles a proteger.
+        Tes repos configurés et ceux disponibles à protéger.
       </p>
 
       {/* Configured repos */}
       <div className="mb-10">
         <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2" style={{ fontFamily: "Georgia, serif" }}>
-          Repos configures
+          Repos configurés
           <span className="text-xs font-normal px-2 py-0.5 rounded-full" style={{ background: "rgba(201,168,76,0.1)", color: "#c9a84c" }}>
             {totalConfigured}
           </span>
@@ -61,7 +61,7 @@ export default async function ReposPage() {
         {totalConfigured === 0 ? (
           <div className="rounded-lg p-6 text-center border" style={{ background: "#1a1628", borderColor: "#252036" }}>
             <p style={{ color: "#b0a8c4" }}>
-              Aucun repo configure. Choisis un repo ci-dessous pour commencer.
+              Aucun repo configuré. Choisis un repo ci-dessous pour commencer.
             </p>
           </div>
         ) : (
@@ -104,7 +104,7 @@ export default async function ReposPage() {
                             repo.private ? "text-yellow-400 bg-yellow-400/10" : "text-gray-400 bg-gray-400/10"
                           }`}
                         >
-                          {repo.private ? "prive" : "public"}
+                          {repo.private ? "privé" : "public"}
                         </span>
                       </div>
                       {repo.description && <p className="text-sm text-gray-400 truncate">{repo.description}</p>}
@@ -113,7 +113,7 @@ export default async function ReposPage() {
                       className="ml-4 px-3 py-1 text-xs font-medium rounded"
                       style={{ color: "#c9a84c", background: "rgba(201,168,76,0.1)" }}
                     >
-                      Configure
+                      Configuré
                     </span>
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -127,7 +127,7 @@ export default async function ReposPage() {
                       {config.keyword || "/sphinx"}
                     </span>
                     <span className="text-xs" style={{ color: "#8b85a0" }}>
-                      — configure par {team.user?.githubLogin || "un membre de l'equipe"}
+                      — configuré par {team.user?.githubLogin || "un membre de l'équipe"}
                     </span>
                   </div>
                 </div>

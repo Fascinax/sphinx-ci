@@ -7,9 +7,9 @@ export const dynamic = "force-dynamic";
 
 const statusLabels: Record<string, { label: string; className: string }> = {
   PENDING: { label: "En cours", className: "text-yellow-400 bg-yellow-400/10" },
-  PASSED: { label: "Reussi", className: "text-green-400 bg-green-400/10" },
-  FAILED: { label: "Echoue", className: "text-red-400 bg-red-400/10" },
-  EXPIRED: { label: "Expire", className: "text-gray-400 bg-gray-400/10" },
+  PASSED: { label: "Réussi", className: "text-green-400 bg-green-400/10" },
+  FAILED: { label: "Échoué", className: "text-red-400 bg-red-400/10" },
+  EXPIRED: { label: "Expiré", className: "text-gray-400 bg-gray-400/10" },
 };
 
 export default async function QuizzesPage() {
@@ -27,7 +27,7 @@ export default async function QuizzesPage() {
     <div>
       <h1 className="text-2xl font-bold text-white mb-2">Historique des quiz</h1>
       <p className="text-gray-400 text-sm mb-6">
-        Les 50 derniers quiz generes sur tes repos.
+        Les 50 derniers quiz générés sur tes repos.
       </p>
 
       {quizzes.length === 0 ? (

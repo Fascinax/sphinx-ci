@@ -63,7 +63,7 @@ export default async function DashboardLayout({
                 className="text-sm transition-colors"
                 style={{ color: "#8b85a0" }}
               >
-                Deconnexion
+                Déconnexion
               </button>
             </form>
           </div>
