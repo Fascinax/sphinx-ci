@@ -137,22 +137,16 @@ export default async function ReposPage() {
         )}
       </div>
 
-      {/* Available repos */}
-      <div>
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2" style={{ fontFamily: "Georgia, serif" }}>
-          Repos disponibles
-          <span className="text-xs font-normal px-2 py-0.5 rounded-full" style={{ background: "rgba(94,88,120,0.2)", color: "#8b85a0" }}>
-            {available.length}
-          </span>
-        </h2>
+      {/* Available repos — only shown to users who have configured at least one repo (admins) */}
+      {configuredByMe.length > 0 && available.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2" style={{ fontFamily: "Georgia, serif" }}>
+            Repos disponibles
+            <span className="text-xs font-normal px-2 py-0.5 rounded-full" style={{ background: "rgba(94,88,120,0.2)", color: "#8b85a0" }}>
+              {available.length}
+            </span>
+          </h2>
 
-        {available.length === 0 ? (
-          <div className="rounded-lg p-6 text-center border" style={{ background: "#1a1628", borderColor: "#252036" }}>
-            <p style={{ color: "#b0a8c4" }}>
-              Tous tes repos sont deja configures.
-            </p>
-          </div>
-        ) : (
           <div className="space-y-3">
             {available.map((repo) => (
               <RepoCard
@@ -166,8 +160,30 @@ export default async function ReposPage() {
               />
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* First-time setup prompt for users with no repos configured */}
+      {configuredByMe.length === 0 && configuredByOthers.length === 0 && available.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2" style={{ fontFamily: "Georgia, serif" }}>
+            Configurer un repo
+          </h2>
+          <div className="space-y-3">
+            {available.map((repo) => (
+              <RepoCard
+                key={repo.id}
+                repoFullName={repo.full_name}
+                repoName={repo.name}
+                isPrivate={repo.private}
+                language={repo.language}
+                description={repo.description}
+                configured={false}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -29,13 +29,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing repo field" }, { status: 400 });
   }
 
+  // Check if this repo is already configured by anyone
   const existing = await prisma.team.findFirst({
-    where: { name: body.repo, userId: session.user.id },
+    where: { name: body.repo },
   });
 
   if (existing) {
+    if (existing.userId === session.user.id) {
+      return NextResponse.json(
+        { error: "This repo is already configured", apiKey: existing.apiKey },
+        { status: 409 }
+      );
+    }
     return NextResponse.json(
-      { error: "This repo is already configured", apiKey: existing.apiKey },
+      { error: "This repo is already configured by another user" },
       { status: 409 }
     );
   }
