@@ -6,9 +6,12 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "sphinx-ci — Quiz de compréhension de code",
+  title: "sphinx-ci — Code comprehension quizzes before merge",
   description:
-    "Le Sphinx bloque le merge jusqu'à ce que le développeur prouve sa compréhension du code.",
+    "The Sphinx blocks the merge until the developer proves they understand their own code. AI-powered quizzes from PR diffs.",
+  icons: {
+    icon: "/sphinx-favicon.png",
+  },
 };
 
 export default function RootLayout({
@@ -17,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr">
+    <html lang="en">
       <body className={inter.className}>
         <SessionProvider>{children}</SessionProvider>
       </body>

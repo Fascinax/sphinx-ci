@@ -21,12 +21,8 @@ export default async function DashboardLayout({
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center gap-2">
-              <svg width="24" height="24" viewBox="0 0 100 100" fill="none">
-                <path d="M50 8L90 35V65L50 92L10 65V35L50 8Z" stroke="#c9a84c" strokeWidth="4" fill="#c9a84c" fillOpacity="0.1" />
-                <circle cx="38" cy="45" r="5" fill="#c9a84c" />
-                <circle cx="62" cy="45" r="5" fill="#c9a84c" />
-                <path d="M35 62C35 62 42 70 50 70C58 70 65 62 65 62" stroke="#c9a84c" strokeWidth="3" strokeLinecap="round" />
-              </svg>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/sphinx-logo.svg" alt="" width={24} height={24} />
               <span className="text-lg font-bold" style={{ color: "#c9a84c", fontFamily: "Georgia, serif" }}>
                 sphinx-ci
               </span>

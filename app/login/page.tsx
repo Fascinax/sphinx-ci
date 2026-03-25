@@ -18,12 +18,8 @@ export default async function LoginPage({
       <div className="max-w-sm w-full">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <svg width="32" height="32" viewBox="0 0 100 100" fill="none">
-              <path d="M50 8L90 35V65L50 92L10 65V35L50 8Z" stroke="#c9a84c" strokeWidth="4" fill="#c9a84c" fillOpacity="0.1" />
-              <circle cx="38" cy="45" r="5" fill="#c9a84c" />
-              <circle cx="62" cy="45" r="5" fill="#c9a84c" />
-              <path d="M35 62C35 62 42 70 50 70C58 70 65 62 65 62" stroke="#c9a84c" strokeWidth="3" strokeLinecap="round" />
-            </svg>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/sphinx-logo.svg" alt="" width={32} height={32} />
             <span className="text-xl font-bold" style={{ color: "#c9a84c" }}>
               sphinx-ci
             </span>
