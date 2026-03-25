@@ -105,32 +105,22 @@ export async function POST(
     },
   });
 
-  // Use the admin's token for status checks (needs repo write access)
-  const adminToken = await getGitHubToken(quiz.team.id, quiz.callbackToken);
-
-  // Use the quiz taker's token for PR comments (shows their profile)
-  let commentToken = adminToken;
+  // All comments posted as the admin (sphinx-ci identity), mentioning the dev
+  const token = await getGitHubToken(quiz.team.id, quiz.callbackToken);
   const session = await auth();
-  if (session?.user?.id) {
-    const account = await prisma.account.findFirst({
-      where: { userId: session.user.id, provider: "github" },
-      select: { access_token: true },
-    });
-    if (account?.access_token) {
-      commentToken = account.access_token;
-    }
-  }
+  const devLogin = session?.user?.githubLogin;
+  const mention = devLogin ? `@${devLogin}` : "Developer";
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const quizUrl = `${appUrl}/q/${quiz.id}`;
 
-  // Update GitHub status (admin token) + post comment (quiz taker's token)
+  // Update GitHub status + post comment mentioning the dev
   try {
     if (newStatus === "PASSED") {
       await updateCommitStatus(
         quiz.repo,
         quiz.headSha,
-        adminToken,
+        token,
         "success",
         config.language === "en"
           ? `Quiz passed — score ${score}/100`
@@ -140,16 +130,16 @@ export async function POST(
       await postPRComment(
         quiz.repo,
         quiz.prNumber,
-        commentToken,
+        token,
         config.language === "en"
-          ? `## Quiz passed ✅\n\nScore: **${score}/100** (${correctCount}/${numQuestions})\n\nMerge is unlocked.`
-          : `## Quiz réussi ✅\n\nScore : **${score}/100** (${correctCount}/${numQuestions})\n\nLe merge est débloqué.`
+          ? `## Quiz passed ✅\n\n${mention} scored **${score}/100** (${correctCount}/${numQuestions})\n\nMerge is unlocked.`
+          : `## Quiz réussi ✅\n\n${mention} a obtenu **${score}/100** (${correctCount}/${numQuestions})\n\nLe merge est débloqué.`
       );
     } else if (newStatus === "FAILED") {
       await updateCommitStatus(
         quiz.repo,
         quiz.headSha,
-        adminToken,
+        token,
         "failure",
         config.language === "en"
           ? `Quiz failed — score ${score}/100 (max attempts reached)`
@@ -159,21 +149,20 @@ export async function POST(
       await postPRComment(
         quiz.repo,
         quiz.prNumber,
-        commentToken,
+        token,
         config.language === "en"
-          ? `## Quiz failed ❌\n\nScore: **${score}/100** (${correctCount}/${numQuestions})\n\nAll attempts used. Merge remains blocked.`
-          : `## Quiz échoué ❌\n\nScore : **${score}/100** (${correctCount}/${numQuestions})\n\nToutes les tentatives épuisées. Le merge reste bloqué.`
+          ? `## Quiz failed ❌\n\n${mention} scored **${score}/100** (${correctCount}/${numQuestions})\n\nAll attempts used. Merge remains blocked.`
+          : `## Quiz échoué ❌\n\n${mention} a obtenu **${score}/100** (${correctCount}/${numQuestions})\n\nToutes les tentatives épuisées. Le merge reste bloqué.`
       );
     } else {
-      // Still pending — post comment about retry
       const remaining = quiz.maxAttempts - newAttempts;
       await postPRComment(
         quiz.repo,
         quiz.prNumber,
-        commentToken,
+        token,
         config.language === "en"
-          ? `## Quiz not passed yet\n\nScore: **${score}/100** (${correctCount}/${numQuestions})\n\n${remaining} attempt${remaining > 1 ? "s" : ""} remaining. [Retry →](${quizUrl})`
-          : `## Quiz pas encore réussi\n\nScore : **${score}/100** (${correctCount}/${numQuestions})\n\n${remaining} tentative${remaining > 1 ? "s" : ""} restante${remaining > 1 ? "s" : ""}. [Réessayer →](${quizUrl})`
+          ? `## Quiz not passed yet\n\n${mention} scored **${score}/100** (${correctCount}/${numQuestions})\n\n${remaining} attempt${remaining > 1 ? "s" : ""} remaining. [Retry →](${quizUrl})`
+          : `## Quiz pas encore réussi\n\n${mention} a obtenu **${score}/100** (${correctCount}/${numQuestions})\n\n${remaining} tentative${remaining > 1 ? "s" : ""} restante${remaining > 1 ? "s" : ""}. [Réessayer →](${quizUrl})`
       );
     }
   } catch (error) {
