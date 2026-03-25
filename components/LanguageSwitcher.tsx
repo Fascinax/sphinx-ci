@@ -14,10 +14,11 @@ export default function LanguageSwitcher({ locale }: { locale: "en" | "fr" }) {
   return (
     <button
       onClick={switchLocale}
-      className="text-xs px-2 py-1 rounded border transition-colors"
+      className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded border transition-colors"
       style={{ borderColor: "#252036", color: "#b0a8c4" }}
       title={locale === "en" ? "Passer en français" : "Switch to English"}
     >
+      <span className="text-sm leading-none">{locale === "en" ? "🇫🇷" : "🇬🇧"}</span>
       {locale === "en" ? "FR" : "EN"}
     </button>
   );
