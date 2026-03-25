@@ -183,22 +183,22 @@ export default async function Home() {
           <div className="grid md:grid-cols-4 gap-5">
             {[
               {
-                step: "I",
+                step: "Α",
                 title: t.landing.step1title,
                 desc: t.landing.step1desc,
               },
               {
-                step: "II",
+                step: "Β",
                 title: t.landing.step2title,
                 desc: t.landing.step2desc,
               },
               {
-                step: "III",
+                step: "Γ",
                 title: t.landing.step3title,
                 desc: t.landing.step3desc,
               },
               {
-                step: "IV",
+                step: "Δ",
                 title: t.landing.step4title,
                 desc: t.landing.step4desc,
               },
