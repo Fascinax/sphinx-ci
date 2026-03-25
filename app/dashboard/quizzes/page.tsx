@@ -47,8 +47,8 @@ export default async function QuizzesPage() {
           </p>
         </div>
       ) : (
-        <div className="rounded-lg border overflow-hidden" style={{ background: "#1a1628", borderColor: "#252036" }}>
-          <table className="w-full text-sm">
+        <div className="rounded-lg border overflow-x-auto" style={{ background: "#1a1628", borderColor: "#252036" }}>
+          <table className="w-full text-sm min-w-[600px]">
             <thead>
               <tr className="border-b" style={{ borderColor: "#252036" }}>
                 <th className="text-left px-4 py-3 font-medium" style={{ color: "#8b85a0" }}>{t.quizzes.repo}</th>

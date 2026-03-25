@@ -77,7 +77,7 @@ export default async function Home() {
             </>
           ) : (
             <>
-              <Link href="/login" className="px-4 py-2 text-sm transition-colors" style={{ color: "#c9a84c" }}>
+              <Link href="/login" className="hidden sm:block px-4 py-2 text-sm transition-colors" style={{ color: "#c9a84c" }}>
                 {t.nav.signIn}
               </Link>
               <Link
@@ -185,7 +185,7 @@ export default async function Home() {
             {t.landing.howSubtitle}
           </p>
 
-          <div className="grid md:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
             {[
               {
                 step: "Α",
