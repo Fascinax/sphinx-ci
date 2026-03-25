@@ -1,40 +1,8 @@
 import Link from "next/link";
 import { auth, signOut } from "@/lib/auth-options";
+import DemoQuiz from "@/components/DemoQuiz";
 
 const GITHUB_REPO = "AGuyNextDoor/sphinx-ci";
-
-const demoQuestions = [
-  {
-    question: "Que retourne la fonction truncate si maxLength vaut 2 et que la chaîne fait 10 caractères ?",
-    options: [
-      "A) Les 2 premiers caractères",
-      "B) Une chaîne plus longue que maxLength",
-      "C) Une chaîne vide",
-      "D) Une erreur TypeError",
-    ],
-    correct: 1,
-  },
-  {
-    question: "Dans timeAgo, que se passe-t-il pour une date dans le futur ?",
-    options: [
-      "A) Elle lève une exception",
-      "B) Elle retourne 'dans le futur'",
-      "C) Elle retourne 'à l'instant'",
-      "D) Elle retourne une valeur négative",
-    ],
-    correct: 2,
-  },
-  {
-    question: "Combien de caractères retourne randomHex(16) ?",
-    options: [
-      "A) 16 caractères",
-      "B) 32 caractères",
-      "C) 64 caractères",
-      "D) Variable selon les valeurs",
-    ],
-    correct: 1,
-  },
-];
 
 export default async function Home() {
   const session = await auth();
@@ -69,9 +37,9 @@ export default async function Home() {
             </svg>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`https://img.shields.io/github/stars/${GITHUB_REPO}?style=flat&label=&color=c9a84c&labelColor=0f0c1a`}
+              src={`https://img.shields.io/github/stars/${GITHUB_REPO}?style=flat&label=stars&color=c9a84c&labelColor=1a1628`}
               alt="GitHub stars"
-              className="h-4"
+              className="h-5"
             />
           </a>
 
@@ -180,10 +148,10 @@ export default async function Home() {
 
           <Link
             href="#demo"
-            className="text-sm transition-colors inline-block mb-16"
-            style={{ color: "#8b85a0" }}
+            className="text-sm inline-block mb-16 animate-bounce"
+            style={{ color: "#b0a8c4" }}
           >
-            ↓ Voir un exemple de quiz
+            ↓ Essayer un quiz de démo
           </Link>
         </div>
       </section>
@@ -192,49 +160,12 @@ export default async function Home() {
       <section id="demo" className="px-4 py-20" style={{ background: "#1a1628" }}>
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl font-bold text-white text-center mb-2" style={{ fontFamily: "Georgia, serif" }}>
-            Exemple de quiz
+            Essaie par toi-même
           </h2>
           <p className="text-center mb-10" style={{ color: "#b0a8c4" }}>
-            Voici à quoi ressemblent les questions générées par le Sphinx.
+            3 questions générées par le Sphinx. Clique sur une réponse pour voir le résultat.
           </p>
-
-          <div className="space-y-4">
-            {demoQuestions.map((q, qi) => (
-              <div
-                key={qi}
-                className="rounded-xl p-5 border"
-                style={{ background: "#0f0c1a", borderColor: "#252036" }}
-              >
-                <p className="text-xs mb-2" style={{ color: "#8b85a0" }}>
-                  Question {qi + 1}/{demoQuestions.length}
-                </p>
-                <p className="text-white mb-4">{q.question}</p>
-                <div className="space-y-2">
-                  {q.options.map((opt, oi) => (
-                    <div
-                      key={oi}
-                      className="px-4 py-2.5 rounded-lg border text-sm transition-colors"
-                      style={{
-                        borderColor: oi === q.correct ? "rgba(201,168,76,0.4)" : "#252036",
-                        background: oi === q.correct ? "rgba(201,168,76,0.08)" : "transparent",
-                        color: oi === q.correct ? "#c9a84c" : "#b0a8c4",
-                      }}
-                    >
-                      {opt}
-                      {oi === q.correct && (
-                        <span className="ml-2 text-xs" style={{ color: "#c9a84c" }}>✓</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <p className="text-center text-sm mt-6" style={{ color: "#8b85a0" }}>
-            En vrai, les réponses ne sont révélées qu&apos;après la soumission.
-            Le nombre de questions, le score minimum et les tentatives sont entièrement personnalisables.
-          </p>
+          <DemoQuiz />
         </div>
       </section>
 
@@ -273,7 +204,7 @@ export default async function Home() {
             ].map((item, i, arr) => (
               <div key={item.step} className="flex items-center">
                 <div
-                  className="step-card rounded-xl p-5 border text-center flex-1"
+                  className="step-card rounded-xl p-5 border text-center flex-1 h-full flex flex-col justify-start"
                   style={{ background: "#1a1628", borderColor: "#252036" }}
                 >
                   <div

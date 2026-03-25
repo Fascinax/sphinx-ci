@@ -1,5 +1,10 @@
 # sphinx-ci
 
+[![GitHub stars](https://img.shields.io/github/stars/AGuyNextDoor/sphinx-ci?style=flat&color=c9a84c&labelColor=0f0c1a)](https://github.com/AGuyNextDoor/sphinx-ci)
+[![License: MIT](https://img.shields.io/badge/license-MIT-c9a84c?labelColor=0f0c1a)](LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-14-white?labelColor=0f0c1a)](https://nextjs.org)
+[![Deploy with Vercel](https://img.shields.io/badge/deploy-Vercel-c9a84c?labelColor=0f0c1a)](https://vercel.com)
+
 Comme le Sphinx de la mythologie grecque, **sphinx-ci** bloque le merge d'une Pull Request tant que le developpeur n'a pas prouve sa comprehension de son propre code en repondant a un quiz genere par IA.
 
 Commente `/sphinx` sur une PR → un quiz est genere depuis le diff → le dev repond → merge debloque ou bloque.
