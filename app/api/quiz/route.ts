@@ -4,6 +4,8 @@ import { generateQuizQuestions, DEFAULT_QUIZ_CONFIG } from "@/lib/claude";
 import type { QuizConfig } from "@/lib/claude";
 import { updateCommitStatus, getGitHubToken } from "@/lib/github";
 import { prisma } from "@/lib/db";
+import { encrypt, decrypt } from "@/lib/encryption";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   // Auth
@@ -13,18 +15,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
   }
 
-  // Rate limiting: 10 requests/hour per API key
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-  const recentQuizCount = await prisma.quiz.count({
-    where: {
-      teamId: team.id,
-      createdAt: { gte: oneHourAgo },
-    },
-  });
-  if (recentQuizCount >= 10) {
+  // Rate limiting: 10 requests/hour per API key (Redis if available, DB fallback)
+  const { allowed, remaining } = await checkRateLimit(team.apiKey, 10, 3600);
+  if (!allowed) {
     return NextResponse.json(
       { error: "Rate limit exceeded. Max 10 quizzes per hour." },
-      { status: 429 }
+      { status: 429, headers: { "X-RateLimit-Remaining": String(remaining) } }
     );
   }
 
@@ -55,8 +51,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Anthropic key: from request body (Action secret) or fallback to team's stored key
-  const anthropicKey = anthropic_api_key || team.anthropicApiKey;
+  // Anthropic key: from request body (Action secret) or fallback to team's stored key (decrypt)
+  const storedKey = team.anthropicApiKey ? decrypt(team.anthropicApiKey) : null;
+  const anthropicKey = anthropic_api_key || storedKey;
   if (!anthropicKey) {
     return NextResponse.json(
       { error: "No Anthropic API key provided. Add ANTHROPIC_API_KEY as a secret in your repo." },
@@ -64,11 +61,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Store/update the key on the team for regeneration later
-  if (anthropic_api_key && anthropic_api_key !== team.anthropicApiKey) {
+  // Store/update the key on the team for regeneration later (encrypted)
+  if (anthropic_api_key && anthropic_api_key !== storedKey) {
     await prisma.team.update({
       where: { id: team.id },
-      data: { anthropicApiKey: anthropic_api_key },
+      data: { anthropicApiKey: encrypt(anthropic_api_key) },
     }).catch(() => {});
   }
 

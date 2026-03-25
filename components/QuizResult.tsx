@@ -46,8 +46,8 @@ export default function QuizResult({
   const t = dictionaries[locale];
   const [regenerating, setRegenerating] = useState(false);
 
-  const scoreColor = result.passed ? "text-green-400" : "text-red-400";
-  const ringColor = result.passed ? "stroke-green-500" : "stroke-red-500";
+  const ringStroke = result.passed ? "#c9a84c" : "#ef4444";
+  const scoreColor = result.passed ? "#c9a84c" : "#ef4444";
   const circumference = 2 * Math.PI * 45;
   const offset = circumference - (result.score / 100) * circumference;
 
@@ -74,7 +74,7 @@ export default function QuizResult({
               cy="50"
               r="45"
               fill="none"
-              stroke="#374151"
+              stroke="#252036"
               strokeWidth="6"
             />
             <circle
@@ -82,7 +82,7 @@ export default function QuizResult({
               cy="50"
               r="45"
               fill="none"
-              className={ringColor}
+              stroke={ringStroke}
               strokeWidth="6"
               strokeLinecap="round"
               strokeDasharray={circumference}
@@ -91,13 +91,13 @@ export default function QuizResult({
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className={`text-3xl font-bold ${scoreColor}`}>
+            <span className="text-3xl font-bold" style={{ color: scoreColor }}>
               {result.score}%
             </span>
           </div>
         </div>
 
-        <h2 className={`text-2xl font-bold mb-2 ${scoreColor}`}>
+        <h2 className="text-2xl font-bold mb-2" style={{ color: scoreColor, fontFamily: "Georgia, serif" }}>
           {result.passed
             ? t.result.passed
             : result.attempts_remaining > 0
@@ -105,25 +105,26 @@ export default function QuizResult({
             : t.result.failed}
         </h2>
 
-        <p className="text-gray-400">
+        <p style={{ color: "#b0a8c4" }}>
           {result.correct}/{result.total} {t.result.correct}
         </p>
 
         {result.passed && (
-          <p className="text-green-300 text-sm mt-2">
+          <p className="text-sm mt-2" style={{ color: "#c9a84c" }}>
             {t.result.mergeUnlocked}
           </p>
         )}
 
         {!result.passed && result.attempts_remaining > 0 && (
           <div className="text-center mt-4">
-            <p className="text-yellow-300 text-sm mb-3">
+            <p className="text-sm mb-3" style={{ color: "#b0a8c4" }}>
               {result.attempts_remaining} {t.result.retryLeft}
             </p>
             <button
               onClick={handleRetry}
               disabled={regenerating}
-              className="px-5 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+              className="px-5 py-2 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
+              style={{ background: "#c9a84c", color: "#0f0c1a" }}
             >
               {regenerating ? t.result.generating : t.result.retry}
             </button>
@@ -131,14 +132,14 @@ export default function QuizResult({
         )}
 
         {!result.passed && result.attempts_remaining === 0 && (
-          <p className="text-red-300 text-sm mt-2">
+          <p className="text-sm mt-2 text-red-400">
             {t.result.allUsed}
           </p>
         )}
       </div>
 
       {/* Detailed results */}
-      <h3 className="text-lg font-semibold text-white mb-4">
+      <h3 className="text-lg font-semibold text-white mb-4" style={{ fontFamily: "Georgia, serif" }}>
         {t.result.details}
       </h3>
       <div className="space-y-4">
@@ -147,37 +148,29 @@ export default function QuizResult({
           return (
             <div
               key={r.question_id}
-              className={`border rounded-lg p-4 ${
-                r.correct
-                  ? "border-green-800 bg-green-900/20"
-                  : "border-red-800 bg-red-900/20"
-              }`}
+              className="rounded-lg p-4 border"
+              style={{
+                borderColor: r.correct ? "rgba(201,168,76,0.3)" : "rgba(239,68,68,0.3)",
+                background: r.correct ? "rgba(201,168,76,0.05)" : "rgba(239,68,68,0.05)",
+              }}
             >
               <div className="flex items-start gap-3">
-                <span
-                  className={`text-lg ${
-                    r.correct ? "text-green-400" : "text-red-400"
-                  }`}
-                >
+                <span className="text-lg" style={{ color: r.correct ? "#c9a84c" : "#ef4444" }}>
                   {r.correct ? "✓" : "✗"}
                 </span>
                 <div className="flex-1">
                   <p className="text-white text-sm mb-2">{q.question}</p>
                   {!r.correct && (
-                    <p className="text-sm text-gray-400 mb-1">
+                    <p className="text-sm mb-1" style={{ color: "#b0a8c4" }}>
                       {t.result.yourAnswer}{" "}
-                      <span className="text-red-300">
-                        {q.options[r.your_answer]}
-                      </span>
+                      <span className="text-red-400">{q.options[r.your_answer]}</span>
                     </p>
                   )}
-                  <p className="text-sm text-gray-400 mb-2">
+                  <p className="text-sm mb-2" style={{ color: "#b0a8c4" }}>
                     {t.result.correctAnswer}{" "}
-                    <span className="text-green-300">
-                      {q.options[r.right_answer]}
-                    </span>
+                    <span style={{ color: "#c9a84c" }}>{q.options[r.right_answer]}</span>
                   </p>
-                  <p className="text-xs text-gray-400 italic">
+                  <p className="text-xs italic" style={{ color: "#8b85a0" }}>
                     {r.explanation}
                   </p>
                 </div>

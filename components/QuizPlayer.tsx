@@ -143,13 +143,14 @@ export default function QuizPlayer({
         {questions.map((_, i) => (
           <div
             key={i}
-            className={`h-2 flex-1 rounded-full transition-colors cursor-pointer ${
-              i === currentIndex
-                ? "bg-blue-500"
+            className="h-2 flex-1 rounded-full transition-colors cursor-pointer"
+            style={{
+              background: i === currentIndex
+                ? "#c9a84c"
                 : answers[i] !== null
-                ? "bg-green-500"
-                : "bg-gray-700"
-            }`}
+                ? "rgba(201,168,76,0.4)"
+                : "#252036",
+            }}
             onClick={() => {
               setCurrentIndex(i);
               setSelectedOption(answers[i]);
@@ -160,8 +161,8 @@ export default function QuizPlayer({
       </div>
 
       {/* Question */}
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 mb-6">
-        <p className="text-sm text-gray-400 mb-3">
+      <div className="rounded-lg p-6 mb-6 border" style={{ background: "#1a1628", borderColor: "#252036" }}>
+        <p className="text-sm mb-3" style={{ color: "#b0a8c4" }}>
           {t.player.question} {currentIndex + 1}/{questions.length}
         </p>
         <p className="text-lg text-white mb-6">{currentQuestion.question}</p>
@@ -174,11 +175,23 @@ export default function QuizPlayer({
               disabled={confirmed}
               className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
                 confirmed && selectedOption === i
-                  ? "border-blue-500 bg-blue-500/20 text-blue-300"
+                  ? "text-white"
                   : selectedOption === i
-                  ? "border-blue-500 bg-blue-500/10 text-white"
-                  : "border-gray-600 bg-gray-900 text-gray-300 hover:border-gray-500 hover:bg-gray-800"
+                  ? "text-white"
+                  : "text-gray-300"
               } ${confirmed ? "cursor-default" : "cursor-pointer"}`}
+              style={{
+                borderColor: confirmed && selectedOption === i
+                  ? "#c9a84c"
+                  : selectedOption === i
+                  ? "rgba(201,168,76,0.5)"
+                  : "#252036",
+                background: confirmed && selectedOption === i
+                  ? "rgba(201,168,76,0.15)"
+                  : selectedOption === i
+                  ? "rgba(201,168,76,0.05)"
+                  : "#0f0c1a",
+              }}
             >
               {option}
             </button>
@@ -200,7 +213,8 @@ export default function QuizPlayer({
           {!confirmed && selectedOption !== null && (
             <button
               onClick={confirmAnswer}
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+              className="px-5 py-2 rounded-lg text-sm font-medium transition-colors"
+              style={{ background: "#c9a84c", color: "#0f0c1a" }}
             >
               {t.player.confirm}
             </button>
@@ -209,7 +223,8 @@ export default function QuizPlayer({
           {confirmed && currentIndex < questions.length - 1 && (
             <button
               onClick={goToNext}
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+              className="px-5 py-2 rounded-lg text-sm font-medium transition-colors"
+              style={{ background: "#c9a84c", color: "#0f0c1a" }}
             >
               {t.player.next}
             </button>
@@ -219,7 +234,8 @@ export default function QuizPlayer({
             <button
               onClick={submitQuiz}
               disabled={submitting}
-              className="px-5 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+              className="px-5 py-2 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
+              style={{ background: "#c9a84c", color: "#0f0c1a" }}
             >
               {submitting ? t.player.submitting : t.player.submit}
             </button>

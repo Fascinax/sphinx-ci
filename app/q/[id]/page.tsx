@@ -30,8 +30,8 @@ function QuizNav({ repo, prNumber, locale }: { repo: string; prNumber: number; l
       style={{ borderColor: "#252036" }}
     >
       <Link href="/" className="flex items-center gap-2">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/sphinx-logo.svg" alt="" width={28} height={28} />
+        
+        <img src="/sphinx-logo.svg" alt="" width="28" height="28" />
         <span className="text-lg font-bold" style={{ color: "#c9a84c" }}>
           sphinx-ci
         </span>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { generateQuizQuestions, DEFAULT_QUIZ_CONFIG } from "@/lib/claude";
 import type { QuizConfig } from "@/lib/claude";
+import { decrypt } from "@/lib/encryption";
 
 export async function GET(
   _request: NextRequest,
@@ -42,6 +43,8 @@ export async function GET(
     );
   }
 
+  const anthropicKey = decrypt(quiz.team.anthropicApiKey);
+
   const config: QuizConfig = {
     ...DEFAULT_QUIZ_CONFIG,
     ...(quiz.team.quizConfig as Partial<QuizConfig> || {}),
@@ -53,7 +56,7 @@ export async function GET(
       quiz.prTitle,
       filesChanged,
       quiz.diff,
-      quiz.team.anthropicApiKey,
+      anthropicKey,
       config
     );
 

@@ -8,9 +8,9 @@ export const dynamic = "force-dynamic";
 
 const statusClasses: Record<string, string> = {
   PENDING: "text-yellow-400 bg-yellow-400/10",
-  PASSED: "text-green-400 bg-green-400/10",
+  PASSED: "bg-transparent",
   FAILED: "text-red-400 bg-red-400/10",
-  EXPIRED: "text-gray-400 bg-gray-400/10",
+  EXPIRED: "bg-transparent",
 };
 
 export default async function QuizzesPage() {
@@ -35,27 +35,27 @@ export default async function QuizzesPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-white mb-2">{t.quizzes.title}</h1>
-      <p className="text-gray-400 text-sm mb-6">
+      <h1 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "Georgia, serif" }}>{t.quizzes.title}</h1>
+      <p className="text-sm mb-6" style={{ color: "#b0a8c4" }}>
         {t.quizzes.subtitle}
       </p>
 
       {quizzes.length === 0 ? (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 text-center">
-          <p className="text-gray-400">
+        <div className="rounded-lg p-6 text-center border" style={{ background: "#1a1628", borderColor: "#252036" }}>
+          <p style={{ color: "#b0a8c4" }}>
             {t.quizzes.empty}
           </p>
         </div>
       ) : (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+        <div className="rounded-lg border overflow-hidden" style={{ background: "#1a1628", borderColor: "#252036" }}>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-700 text-gray-400">
-                <th className="text-left px-4 py-3 font-medium">{t.quizzes.repo}</th>
-                <th className="text-left px-4 py-3 font-medium">{t.quizzes.pr}</th>
-                <th className="text-left px-4 py-3 font-medium">{t.quizzes.status}</th>
-                <th className="text-left px-4 py-3 font-medium">{t.quizzes.score}</th>
-                <th className="text-left px-4 py-3 font-medium">{t.quizzes.date}</th>
+              <tr className="border-b" style={{ borderColor: "#252036" }}>
+                <th className="text-left px-4 py-3 font-medium" style={{ color: "#8b85a0" }}>{t.quizzes.repo}</th>
+                <th className="text-left px-4 py-3 font-medium" style={{ color: "#8b85a0" }}>{t.quizzes.pr}</th>
+                <th className="text-left px-4 py-3 font-medium" style={{ color: "#8b85a0" }}>{t.quizzes.status}</th>
+                <th className="text-left px-4 py-3 font-medium" style={{ color: "#8b85a0" }}>{t.quizzes.score}</th>
+                <th className="text-left px-4 py-3 font-medium" style={{ color: "#8b85a0" }}>{t.quizzes.date}</th>
                 <th className="text-left px-4 py-3 font-medium"></th>
               </tr>
             </thead>
@@ -63,39 +63,42 @@ export default async function QuizzesPage() {
               {quizzes.map((quiz) => {
                 const statusLabel = statusLabels[quiz.status] || statusLabels.PENDING;
                 const statusClass = statusClasses[quiz.status] || statusClasses.PENDING;
+                const isPassed = quiz.status === "PASSED";
+                const isExpired = quiz.status === "EXPIRED";
                 return (
                   <tr
                     key={quiz.id}
-                    className="border-b border-gray-700/50 hover:bg-gray-700/30"
+                    className="border-b transition-colors"
+                    style={{ borderColor: "rgba(37,32,54,0.5)" }}
                   >
-                    <td className="px-4 py-3 text-gray-300 font-mono text-xs">
+                    <td className="px-4 py-3 font-mono text-xs" style={{ color: "#b0a8c4" }}>
                       {quiz.repo}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-white">
-                        #{quiz.prNumber}
-                      </span>
-                      <span className="text-gray-400 ml-2 truncate max-w-[200px] inline-block align-bottom">
+                      <span className="text-white">#{quiz.prNumber}</span>
+                      <span className="ml-2 truncate max-w-[200px] inline-block align-bottom" style={{ color: "#8b85a0" }}>
                         {quiz.prTitle}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <span
                         className={`px-2 py-1 rounded text-xs font-medium ${statusClass}`}
+                        style={isPassed ? { color: "#c9a84c", background: "rgba(201,168,76,0.1)" } : isExpired ? { color: "#8b85a0", background: "rgba(139,133,160,0.1)" } : undefined}
                       >
                         {statusLabel}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-300">
+                    <td className="px-4 py-3" style={{ color: "#b0a8c4" }}>
                       {quiz.score !== null ? `${quiz.score}%` : "—"}
                     </td>
-                    <td className="px-4 py-3 text-gray-400">
+                    <td className="px-4 py-3" style={{ color: "#8b85a0" }}>
                       {new Date(quiz.createdAt).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US")}
                     </td>
                     <td className="px-4 py-3">
                       <Link
                         href={`/q/${quiz.id}`}
-                        className="text-blue-400 hover:text-blue-300 text-xs"
+                        className="text-xs"
+                        style={{ color: "#c9a84c" }}
                       >
                         {t.quizzes.view}
                       </Link>

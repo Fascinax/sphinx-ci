@@ -21,8 +21,8 @@ export default async function DashboardLayout({
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center gap-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/sphinx-logo.svg" alt="" width={24} height={24} />
+              
+              <img src="/sphinx-logo.svg" alt="" width="24" height="24" />
               <span className="text-lg font-bold" style={{ color: "#c9a84c", fontFamily: "Georgia, serif" }}>
                 sphinx-ci
               </span>

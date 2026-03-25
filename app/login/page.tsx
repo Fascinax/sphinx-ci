@@ -18,8 +18,8 @@ export default async function LoginPage({
       <div className="max-w-sm w-full">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/sphinx-logo.svg" alt="" width={32} height={32} />
+            
+            <img src="/sphinx-logo.svg" alt="" width="32" height="32" />
             <span className="text-xl font-bold" style={{ color: "#c9a84c" }}>
               sphinx-ci
             </span>

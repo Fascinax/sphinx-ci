@@ -49,6 +49,7 @@ export default function RepoCard({
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
+  const [toast, setToast] = useState("");
 
   // Form state
   const [numQuestions, setNumQuestions] = useState(initialConfig?.numQuestions ?? 10);
@@ -56,6 +57,11 @@ export default function RepoCard({
   const [maxAttempts, setMaxAttempts] = useState(initialConfig?.maxAttempts ?? 3);
   const [quizLanguage, setQuizLanguage] = useState<"fr" | "en">(initialConfig?.language ?? "fr");
   const [keyword, setKeyword] = useState(initialConfig?.keyword ?? "/sphinx");
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(""), 3000);
+  }
 
   function openEditForm() {
     setEditing(true);
@@ -78,6 +84,7 @@ export default function RepoCard({
         if (res.ok) {
           setShowForm(false);
           setEditing(false);
+          showToast("✓ Saved");
         } else {
           const data = await res.json();
           setError(data.error || t.repoCard.errorUpdate);
@@ -98,6 +105,7 @@ export default function RepoCard({
           setConfigured(true);
           setShowKey(true);
           setShowForm(false);
+          showToast("✓ API key generated");
         } else if (res.status === 409) {
           setApiKey(data.apiKey);
           setConfigured(true);
@@ -300,6 +308,16 @@ export default function RepoCard({
           <p className="text-xs mt-2" style={{ color: "#8b85a0" }}>
             {t.repoCard.secretHint}
           </p>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div
+          className="mt-3 px-3 py-2 rounded text-xs font-medium text-center transition-all"
+          style={{ background: "rgba(201,168,76,0.15)", color: "#c9a84c" }}
+        >
+          {toast}
         </div>
       )}
     </div>
