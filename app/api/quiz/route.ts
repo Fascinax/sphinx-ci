@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
     files_changed: string[];
     callback_token: string;
     anthropic_api_key?: string;
+    openrouter_api_key?: string;
   };
 
   try {
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { repo, pr_number, head_sha, pr_title, diff, files_changed, callback_token, anthropic_api_key } = body;
+  const { repo, pr_number, head_sha, pr_title, diff, files_changed, callback_token, anthropic_api_key, openrouter_api_key } = body;
 
   if (!repo || !pr_number || !head_sha || !pr_title || !callback_token) {
     return NextResponse.json(
@@ -51,22 +52,45 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Anthropic key: from request body (Action secret) or fallback to team's stored key (decrypt)
-  const storedKey = team.anthropicApiKey ? decrypt(team.anthropicApiKey) : null;
-  const anthropicKey = anthropic_api_key || storedKey;
-  if (!anthropicKey) {
-    return NextResponse.json(
-      { error: "No Anthropic API key provided. Add ANTHROPIC_API_KEY as a secret in your repo." },
-      { status: 400 }
-    );
-  }
+  // Load team config to determine provider
+  const config: QuizConfig = {
+    ...DEFAULT_QUIZ_CONFIG,
+    ...(team.quizConfig as Partial<QuizConfig> || {}),
+  };
+  const provider = config.aiProvider ?? "anthropic";
 
-  // Store/update the key on the team for regeneration later (encrypted)
-  if (anthropic_api_key && anthropic_api_key !== storedKey) {
-    await prisma.team.update({
-      where: { id: team.id },
-      data: { anthropicApiKey: encrypt(anthropic_api_key) },
-    }).catch(() => {});
+  // Resolve API key based on provider: body first, then stored team key
+  let resolvedApiKey: string | null = null;
+  if (provider === "openrouter") {
+    const storedKey = team.openrouterApiKey ? decrypt(team.openrouterApiKey) : null;
+    resolvedApiKey = openrouter_api_key || storedKey;
+    if (!resolvedApiKey) {
+      return NextResponse.json(
+        { error: "No OpenRouter API key provided. Add OPENROUTER_API_KEY as a secret in your repo." },
+        { status: 400 }
+      );
+    }
+    if (openrouter_api_key && openrouter_api_key !== storedKey) {
+      await prisma.team.update({
+        where: { id: team.id },
+        data: { openrouterApiKey: encrypt(openrouter_api_key) },
+      }).catch(() => {});
+    }
+  } else {
+    const storedKey = team.anthropicApiKey ? decrypt(team.anthropicApiKey) : null;
+    resolvedApiKey = anthropic_api_key || storedKey;
+    if (!resolvedApiKey) {
+      return NextResponse.json(
+        { error: "No Anthropic API key provided. Add ANTHROPIC_API_KEY as a secret in your repo." },
+        { status: 400 }
+      );
+    }
+    if (anthropic_api_key && anthropic_api_key !== storedKey) {
+      await prisma.team.update({
+        where: { id: team.id },
+        data: { anthropicApiKey: encrypt(anthropic_api_key) },
+      }).catch(() => {});
+    }
   }
 
   // Skip if no meaningful diff — post comment from admin account
@@ -86,31 +110,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ quiz_url: null, skipped: true });
   }
 
-  // Load team config
-  const config: QuizConfig = {
-    ...DEFAULT_QUIZ_CONFIG,
-    ...(team.quizConfig as Partial<QuizConfig> || {}),
-  };
-
-  // Generate questions via Claude
+  // Generate questions via AI
   let questions;
   try {
     questions = await generateQuizQuestions(
       pr_title,
       files_changed || [],
       diff.slice(0, 12000),
-      anthropicKey,
+      resolvedApiKey,
       config
     );
   } catch (error) {
-    console.error("Claude generation failed:", error);
+    console.error("AI generation failed:", error);
     const ghToken = await getGitHubToken(team.id, callback_token);
     try {
       await postPRComment(
         repo,
         pr_number,
         ghToken,
-        "## ⚠️ sphinx-ci — Quiz generation failed\n\nClaude could not generate the quiz. This is temporary — try again by commenting `@sphinx-ci`.\n\nYour PR is **not blocked**."
+        "## ⚠️ sphinx-ci — Quiz generation failed\n\nThe AI could not generate the quiz. This is temporary — try again by commenting `@sphinx-ci`.\n\nYour PR is **not blocked**."
       );
       await updateCommitStatus(repo, head_sha, ghToken, "success", "Quiz generation failed — not blocking");
     } catch (e) {

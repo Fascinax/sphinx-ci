@@ -12,7 +12,7 @@ export async function GET(
 
   const quiz = await prisma.quiz.findUnique({
     where: { id },
-    include: { team: { select: { anthropicApiKey: true, quizConfig: true } } },
+    include: { team: { select: { anthropicApiKey: true, openrouterApiKey: true, quizConfig: true } } },
   });
   if (!quiz) {
     return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
@@ -36,19 +36,37 @@ export async function GET(
     );
   }
 
-  if (!quiz.team.anthropicApiKey) {
+  if (!quiz.team.anthropicApiKey && !quiz.team.openrouterApiKey) {
     return NextResponse.json(
-      { error: "No Anthropic API key configured" },
+      { error: "No AI API key configured" },
       { status: 400 }
     );
   }
-
-  const anthropicKey = decrypt(quiz.team.anthropicApiKey);
 
   const config: QuizConfig = {
     ...DEFAULT_QUIZ_CONFIG,
     ...(quiz.team.quizConfig as Partial<QuizConfig> || {}),
   };
+  const provider = config.aiProvider ?? "anthropic";
+
+  let apiKey: string;
+  if (provider === "openrouter") {
+    if (!quiz.team.openrouterApiKey) {
+      return NextResponse.json(
+        { error: "No OpenRouter API key configured" },
+        { status: 400 }
+      );
+    }
+    apiKey = decrypt(quiz.team.openrouterApiKey);
+  } else {
+    if (!quiz.team.anthropicApiKey) {
+      return NextResponse.json(
+        { error: "No Anthropic API key configured" },
+        { status: 400 }
+      );
+    }
+    apiKey = decrypt(quiz.team.anthropicApiKey);
+  }
 
   try {
     const filesChanged = quiz.repo ? [quiz.repo] : [];
@@ -56,7 +74,7 @@ export async function GET(
       quiz.prTitle,
       filesChanged,
       quiz.diff,
-      anthropicKey,
+      apiKey,
       config
     );
 

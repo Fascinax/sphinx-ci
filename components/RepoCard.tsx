@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { dictionaries } from "@/lib/i18n";
+import { ANTHROPIC_MODELS, OPENROUTER_MODELS } from "@/lib/claude";
+import type { AIProvider } from "@/lib/claude";
 
 interface RepoCardProps {
   repoFullName: string;
@@ -18,6 +20,8 @@ interface RepoCardProps {
     maxAttempts?: number;
     language?: "fr" | "en";
     keyword?: string;
+    aiProvider?: AIProvider;
+    aiModel?: string;
   };
   locale: "en" | "fr";
 }
@@ -57,6 +61,9 @@ export default function RepoCard({
   const [maxAttempts, setMaxAttempts] = useState(initialConfig?.maxAttempts ?? 3);
   const [quizLanguage, setQuizLanguage] = useState<"fr" | "en">(initialConfig?.language ?? "fr");
   const [keyword, setKeyword] = useState(initialConfig?.keyword ?? "@sphinx-ci");
+  const [aiProvider, setAiProvider] = useState<AIProvider>(initialConfig?.aiProvider ?? "anthropic");
+  const [aiModel, setAiModel] = useState(initialConfig?.aiModel ?? "");
+  const [customModel, setCustomModel] = useState("");
 
   function showToast(msg: string) {
     setToast(msg);
@@ -71,15 +78,27 @@ export default function RepoCard({
 
   async function handleConfigure() {
     setError("");
+    if (aiModel === "custom" && !customModel.trim()) {
+      setError("Veuillez renseigner le nom du modèle personnalisé.");
+      return;
+    }
     setLoading(true);
+    const resolvedModel = aiModel === "custom" ? customModel.trim() : aiModel || undefined;
+    const configPayload = {
+      numQuestions,
+      passingScore,
+      maxAttempts,
+      language: quizLanguage,
+      keyword,
+      aiProvider,
+      ...(resolvedModel ? { aiModel: resolvedModel } : {}),
+    };
     try {
       if (editing && teamId) {
         const res = await fetch(`/api/keys/${teamId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            config: { numQuestions, passingScore, maxAttempts, language: quizLanguage, keyword },
-          }),
+          body: JSON.stringify({ config: configPayload }),
         });
         if (res.ok) {
           setShowForm(false);
@@ -93,10 +112,7 @@ export default function RepoCard({
         const res = await fetch("/api/keys", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            repo: repoFullName,
-            config: { numQuestions, passingScore, maxAttempts, language: quizLanguage, keyword },
-          }),
+          body: JSON.stringify({ repo: repoFullName, config: configPayload }),
         });
         const data = await res.json();
         if (res.ok) {
@@ -156,6 +172,9 @@ export default function RepoCard({
     setTimeout(() => setCopied(false), 2000);
   }
 
+  const providerModels = aiProvider === "openrouter" ? OPENROUTER_MODELS : ANTHROPIC_MODELS;
+  const defaultModelHint = aiProvider === "openrouter" ? "anthropic/claude-sonnet-4" : "claude-sonnet-4-20250514";
+
   const configForm = (
     <div className="mt-4 pt-4 border-t" style={{ borderColor: "#252036" }}>
       <div className="space-y-3">
@@ -203,6 +222,68 @@ export default function RepoCard({
         <div>
           <label className={labelClass}>{t.repoCard.keyword}</label>
           <input type="text" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="@sphinx-ci" className={inputClass} />
+        </div>
+
+        {/* AI Provider + Model */}
+        <div className="pt-1 border-t" style={{ borderColor: "#252036" }}>
+          <p className="text-xs font-medium mb-2" style={{ color: "#b0a8c4" }}>{t.repoCard.aiConfig}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className={labelClass}>{t.repoCard.aiProvider}</label>
+              <select
+                value={aiProvider}
+                onChange={(e) => {
+                  setAiProvider(e.target.value as AIProvider);
+                  setAiModel("");
+                  setCustomModel("");
+                }}
+                className={selectClass}
+              >
+                <option value="anthropic">{t.repoCard.providerAnthropic}</option>
+                <option value="openrouter">{t.repoCard.providerOpenRouter}</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>{t.repoCard.aiModel}</label>
+              <select
+                value={aiModel}
+                onChange={(e) => setAiModel(e.target.value)}
+                className={selectClass}
+              >
+                <option value="">{t.repoCard.modelDefault} ({defaultModelHint})</option>
+                {providerModels.map((m) => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+                <option value="custom">{t.repoCard.modelCustom}</option>
+              </select>
+            </div>
+          </div>
+          {aiModel === "custom" && (
+            <div className="mt-2">
+              <input
+                type="text"
+                value={customModel}
+                onChange={(e) => setCustomModel(e.target.value)}
+                placeholder={aiProvider === "openrouter" ? "ex: mistralai/mistral-7b-instruct:free" : "ex: claude-3-opus-20240229"}
+                className={inputClass}
+                required
+                aria-label="Custom model name"
+              />
+              <div className="text-xs text-gray-500 mt-1">
+                {aiProvider === "openrouter" ? (
+                  <>
+                    Voir la liste des modèles compatibles sur{' '}
+                    <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer" className="underline text-blue-600">openrouter.ai/models</a>
+                  </>
+                ) : (
+                  <>Voir la <a href="https://docs.anthropic.com/claude/docs/models-overview" target="_blank" rel="noopener noreferrer" className="underline text-blue-600">liste des modèles Anthropic</a></>
+                )}
+              </div>
+            </div>
+          )}
+          {aiProvider === "openrouter" && (
+            <p className="text-xs mt-2" style={{ color: "#8b85a0" }}>{t.repoCard.openrouterHint}</p>
+          )}
         </div>
 
         {error && <p className="text-xs text-red-400">{error}</p>}

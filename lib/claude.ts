@@ -8,13 +8,36 @@ export interface QuizQuestion {
   explanation: string;
 }
 
+export type AIProvider = "anthropic" | "openrouter";
+
 export interface QuizConfig {
   numQuestions: number;
   passingScore: number;
   maxAttempts: number;
   language: "fr" | "en";
   keyword: string;
+  aiProvider?: AIProvider;
+  aiModel?: string;
 }
+
+export const ANTHROPIC_MODELS = [
+  { value: "claude-sonnet-4-20250514", label: "Claude Sonnet 4 (default)" },
+  { value: "claude-3-5-haiku-20241022", label: "Claude 3.5 Haiku" },
+  { value: "claude-3-opus-20240229", label: "Claude 3 Opus" },
+] as const;
+
+export const OPENROUTER_MODELS = [
+  { value: "anthropic/claude-sonnet-4", label: "Claude Sonnet 4" },
+  { value: "anthropic/claude-3-5-haiku", label: "Claude 3.5 Haiku" },
+  { value: "openai/gpt-4o", label: "GPT-4o" },
+  { value: "openai/gpt-4o-mini", label: "GPT-4o Mini" },
+  { value: "google/gemini-2.0-flash-001", label: "Gemini 2.0 Flash" },
+  { value: "meta-llama/llama-3.3-70b-instruct", label: "Llama 3.3 70B" },
+  { value: "mistralai/mistral-large", label: "Mistral Large" },
+] as const;
+
+const ANTHROPIC_DEFAULT_MODEL = "claude-sonnet-4-20250514";
+const OPENROUTER_DEFAULT_MODEL = "anthropic/claude-sonnet-4";
 
 export const DEFAULT_QUIZ_CONFIG: QuizConfig = {
   numQuestions: 10,
@@ -22,6 +45,7 @@ export const DEFAULT_QUIZ_CONFIG: QuizConfig = {
   maxAttempts: 3,
   language: "fr",
   keyword: "@sphinx-ci",
+  aiProvider: "anthropic",
 };
 
 const PROMPTS = {
@@ -83,10 +107,9 @@ export async function generateQuizQuestions(
   prTitle: string,
   filesChanged: string[],
   diff: string,
-  anthropicApiKey: string,
+  apiKey: string,
   config: QuizConfig = DEFAULT_QUIZ_CONFIG
 ): Promise<QuizQuestion[]> {
-  const client = new Anthropic({ apiKey: anthropicApiKey });
   const lang = PROMPTS[config.language] || PROMPTS.fr;
   const { system, instructions } = lang(config.numQuestions);
 
@@ -98,13 +121,30 @@ Fichiers modifiés : ${filesChanged.join(", ")}
 DIFF :
 ${diff}`;
 
+  const provider = config.aiProvider ?? "anthropic";
+
+  if (provider === "openrouter") {
+    return generateWithOpenRouter(apiKey, config.aiModel ?? OPENROUTER_DEFAULT_MODEL, system, prompt, config.numQuestions);
+  }
+
+  return generateWithAnthropic(apiKey, config.aiModel ?? ANTHROPIC_DEFAULT_MODEL, system, prompt, config.numQuestions);
+}
+
+async function generateWithAnthropic(
+  apiKey: string,
+  model: string,
+  system: string,
+  prompt: string,
+  numQuestions: number
+): Promise<QuizQuestion[]> {
+  const client = new Anthropic({ apiKey });
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000);
 
   try {
     const message = await client.messages.create(
       {
-        model: "claude-sonnet-4-20250514",
+        model,
         max_tokens: 4096,
         system,
         messages: [{ role: "user", content: prompt }],
@@ -114,38 +154,85 @@ ${diff}`;
 
     clearTimeout(timeout);
 
-    const text =
-      message.content[0].type === "text" ? message.content[0].text : "";
-    const parsed = JSON.parse(text);
-
-    if (
-      !parsed.questions ||
-      !Array.isArray(parsed.questions) ||
-      parsed.questions.length !== config.numQuestions
-    ) {
-      throw new Error(
-        `Claude did not return exactly ${config.numQuestions} questions`
-      );
-    }
-
-    for (const q of parsed.questions) {
-      if (
-        typeof q.id !== "number" ||
-        typeof q.question !== "string" ||
-        !Array.isArray(q.options) ||
-        q.options.length !== 4 ||
-        typeof q.correct !== "number" ||
-        q.correct < 0 ||
-        q.correct > 3 ||
-        typeof q.explanation !== "string"
-      ) {
-        throw new Error("Invalid question format");
-      }
-    }
-
-    return parsed.questions as QuizQuestion[];
+    const text = message.content[0].type === "text" ? message.content[0].text : "";
+    return parseAndValidateQuestions(text, numQuestions);
   } catch (error) {
     clearTimeout(timeout);
     throw error;
   }
+}
+
+async function generateWithOpenRouter(
+  apiKey: string,
+  model: string,
+  system: string,
+  prompt: string,
+  numQuestions: number
+): Promise<QuizQuestion[]> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL ?? "https://sphinx-ci.vercel.app",
+        "X-Title": "sphinx-ci",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 4096,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: prompt },
+        ],
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => "");
+      throw new Error(`OpenRouter error ${response.status}: ${errBody}`);
+    }
+
+    const data = await response.json();
+    const text: string = data?.choices?.[0]?.message?.content ?? "";
+    return parseAndValidateQuestions(text, numQuestions);
+  } catch (error) {
+    clearTimeout(timeout);
+    throw error;
+  }
+}
+
+function parseAndValidateQuestions(text: string, numQuestions: number): QuizQuestion[] {
+  const parsed = JSON.parse(text);
+
+  if (
+    !parsed.questions ||
+    !Array.isArray(parsed.questions) ||
+    parsed.questions.length !== numQuestions
+  ) {
+    throw new Error(`AI did not return exactly ${numQuestions} questions`);
+  }
+
+  for (const q of parsed.questions) {
+    if (
+      typeof q.id !== "number" ||
+      typeof q.question !== "string" ||
+      !Array.isArray(q.options) ||
+      q.options.length !== 4 ||
+      typeof q.correct !== "number" ||
+      q.correct < 0 ||
+      q.correct > 3 ||
+      typeof q.explanation !== "string"
+    ) {
+      throw new Error("Invalid question format");
+    }
+  }
+
+  return parsed.questions as QuizQuestion[];
 }
